@@ -42,6 +42,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
 .sidebar {
   width: 248px; flex-shrink: 0; background: var(--sidebar); color: #cfd8d3;
   padding: 20px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column;
 }
 .logo { display: flex; gap: 12px; align-items: center; color: #fff; font-weight: 600; padding: 4px 8px 22px; line-height: 1.3; }
 .logo small { display: block; font-weight: 400; color: #8fa19a; font-size: 12px; }
@@ -54,7 +55,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
 .nav-lien:hover { background: rgba(255, 255, 255, .06); text-decoration: none; }
 .nav-lien.active { background: var(--primaire); color: #fff; }
 .principal { flex: 1; min-width: 0; }
-.contenu { padding: 28px 32px 60px; max-width: 1180px; }
+.contenu { padding: 28px 32px 60px; max-width: 1180px; margin: 0 auto; } /* contenu centré dans la zone principale */
 .barre-mobile { display: none; }
 .voile { display: none; }
 
@@ -273,3 +274,43 @@ input:focus, select:focus { outline: none; border-color: var(--primaire); box-sh
   .modale { position: absolute; left: 0; top: 0; width: 100%; max-height: none; box-shadow: none; padding: 0; }
   .no-print { display: none !important; }
 }
+
+/* ---------- Compte administrateur ---------- */
+.sidebar-compte {
+  margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, .08); padding: 16px 8px 4px; margin-left: -2px;
+}
+.compte-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 255, 255, .1); color: #fff;
+  display: grid; place-items: center; font-weight: 600; flex-shrink: 0;
+}
+.compte-nom { flex: 1; min-width: 0; color: #fff; font-weight: 500; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.compte-nom small { display: block; color: #8fa19a; font-weight: 400; font-size: 12px; }
+.btn-deconnexion {
+  width: 100%; background: transparent; border: 1px solid rgba(255, 255, 255, .14); color: #cfd8d3;
+  border-radius: 7px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.btn-deconnexion:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+.petit { font-size: 13px; margin: -6px 0 14px; }
+
+.chargement-plein { min-height: 100vh; display: grid; place-items: center; color: var(--encre-douce); }
+
+.connexion {
+  min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+  background: linear-gradient(160deg, var(--sidebar) 0 38%, var(--fond) 38% 100%);
+}
+.connexion-carte {
+  width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--bordure);
+  border-radius: 14px; padding: 28px; box-shadow: 0 10px 30px rgba(20, 30, 25, .12);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.connexion-entete { display: flex; gap: 14px; align-items: center; margin-bottom: 6px; }
+.connexion-entete .logo-marque { color: #fff; flex-shrink: 0; }
+.connexion-entete h1 { font-size: 17px; font-weight: 700; }
+.connexion-entete p { margin: 2px 0 0; font-size: 13px; }
+.connexion .alerte { margin: 0; }
+
+/* ---------- Logo de l'école ---------- */
+.logo-image { width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; background: #fff; }
+.connexion-entete { flex-direction: column; text-align: center; gap: 10px; }
+.connexion-entete .logo-image { width: 120px; height: 120px; }

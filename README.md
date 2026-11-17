@@ -39,6 +39,8 @@ cd ../frontend
 npm install
 ```
 
+Connectez-vous avec le compte administrateur créé par `migrate` : identifiant **`admin`**, mot de passe **`admin123`**.
+**Changez ce mot de passe tout de suite** dans **Paramètres → Compte administrateur**.
 Créez ensuite l'année scolaire (ex. `2026-2027`) dans **Paramètres**.
 
 ## 3. Configuration (`backend/.env`)
@@ -88,9 +90,17 @@ Vite redirige automatiquement vers Laravel les appels faits à `/api`.
 | **Réinscription** | Ancien élève : la classe supérieure est proposée. La 3ème est la classe finale |
 | **Paiement** | Droit d'inscription et/ou plusieurs mois d'écolage en un seul reçu |
 | **Journal** | Liste des reçus, avec réimpression |
-| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs |
+| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs, **compte administrateur** (nom, identifiant, mot de passe) |
 
 **Bouton « Imprimer »** : le reçu s'ouvre d'abord en **PDF** dans une fenêtre d'aperçu. Vous pouvez ensuite l'**imprimer** ou le **télécharger**.
+
+### Accès sécurisé
+
+- Toute l'application est protégée par le **compte administrateur** : sans connexion, aucune donnée n'est accessible, même en appelant l'API directement.
+- La session dure **12 heures** (`SANCTUM_EXPIRATION`, en minutes), puis il faut se reconnecter. Le bouton **Déconnexion** se trouve en bas du menu.
+- Après 5 essais de connexion en une minute, les tentatives sont bloquées pendant une minute.
+- Pour modifier le compte, le mot de passe actuel est obligatoire. Changer le mot de passe déconnecte les autres postes.
+- **Mot de passe oublié** : dans un terminal, `cd backend` puis `php artisan tinker --execute="App\Models\User::where('identifiant','admin')->update(['password'=>bcrypt('nouveau-mdp')])"` (adapter l'identifiant si vous l'avez changé).
 
 ## 6. Règles de gestion
 
@@ -154,9 +164,14 @@ Les tests utilisent une base SQLite **en mémoire**, réglée dans `phpunit.xml`
 
 ## 9. API (référence technique)
 
+Toutes les routes sauf `/api/etablissement` et `/api/login` exigent d'être connecté (sinon `401`).
+
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/api/etablissement` | Nom de l'établissement |
+| GET | `/api/etablissement` | Nom de l'établissement (public) |
+| POST | `/api/login` | Connexion (public) : renvoie un jeton à envoyer en `Authorization: Bearer …` |
+| GET, POST | `/api/moi`, `/api/logout` | Compte connecté, déconnexion |
+| PUT | `/api/compte` | Modifier le compte administrateur |
 | GET | `/api/dashboard` | Statistiques de l'année active |
 | GET, POST | `/api/annees-scolaires` | Liste et création des années scolaires |
 | POST | `/api/annees-scolaires/{id}/activer` | Définir l'année active |

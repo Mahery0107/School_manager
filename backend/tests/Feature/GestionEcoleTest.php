@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Etudiant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class GestionEcoleTest extends TestCase
@@ -13,6 +15,12 @@ class GestionEcoleTest extends TestCase
     use RefreshDatabase;
 
     protected $seed = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Sanctum::actingAs(User::where('identifiant', 'admin')->first());
+    }
 
     private function anneeActive(): AnneeScolaire
     {

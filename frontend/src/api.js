@@ -5,6 +5,54 @@ export const api = axios.create({
   headers: { Accept: 'application/json' },
 })
 
+/* ---------- Session du compte administrateur (jeton Sanctum) ---------- */
+const CLE_JETON = 'gestion-ecole-jeton'
+
+const lireStockage = () => {
+  try {
+    return localStorage.getItem(CLE_JETON)
+  } catch {
+    return null
+  }
+}
+
+export const session = {
+  jeton: lireStockage(),
+  ouvrir(jeton) {
+    this.jeton = jeton
+    try {
+      localStorage.setItem(CLE_JETON, jeton)
+    } catch {
+      /* stockage indisponible : session valable jusqu'au rechargement */
+    }
+  },
+  fermer() {
+    this.jeton = null
+    try {
+      localStorage.removeItem(CLE_JETON)
+    } catch {
+      /* rien */
+    }
+  },
+}
+
+api.interceptors.request.use((config) => {
+  if (session.jeton) config.headers.Authorization = `Bearer ${session.jeton}`
+  return config
+})
+
+// Jeton expiré ou invalide : retour à l'écran de connexion
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    if (err?.response?.status === 401 && session.jeton) {
+      session.fermer()
+      window.dispatchEvent(new Event('session-expiree'))
+    }
+    return Promise.reject(err)
+  },
+)
+
 /** Extrait un message lisible + les erreurs par champ d'une erreur Laravel. */
 export function lireErreur(err) {
   const data = err?.response?.data

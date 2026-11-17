@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Logo Collège FIANARAN-TSOA Ambohimiandra — 26 Taona">
+  <title>Collège FIANARAN-TSOA Ambohimiandra — 26 Taona</title>
+  <defs>
+    <path id="arc-haut" d="M 22 100 A 78 78 0 0 1 178 100"/>
+    <path id="arc-bas" d="M 12 100 A 88 88 0 0 0 188 100"/>
+    <clipPath id="interieur"><circle cx="100" cy="100" r="67"/></clipPath>
+  </defs>
+
+  <!-- Anneau extérieur -->
+  <circle cx="100" cy="100" r="98" fill="#1f6f54"/>
+  <circle cx="100" cy="100" r="94" fill="none" stroke="#c9822b" stroke-width="1.2"/>
+  <text font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="700" font-size="13" fill="#fff" letter-spacing="1.2">
+    <textPath href="#arc-haut" startOffset="50%" text-anchor="middle">COLLÈGE FIANARAN-TSOA</textPath>
+  </text>
+  <text font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="600" font-size="10.5" fill="#fff" letter-spacing="2">
+    <textPath href="#arc-bas" startOffset="50%" text-anchor="middle">AMBOHIMIANDRA</textPath>
+  </text>
+  <circle cx="16" cy="100" r="3" fill="#c9822b"/>
+  <circle cx="184" cy="100" r="3" fill="#c9822b"/>
+
+  <!-- Médaillon central -->
+  <circle cx="100" cy="100" r="68" fill="#fbf8f1" stroke="#c9822b" stroke-width="2"/>
+  <g clip-path="url(#interieur)">
+    <!-- soleil levant derrière le ravinala -->
+    <circle cx="100" cy="116" r="44" fill="#c9822b" opacity=".14"/>
+    <!-- sol -->
+    <path d="M30 150 Q100 138 170 150 L170 175 L30 175 Z" fill="#1f6f54" opacity=".12"/>
+  </g>
+
+  <!-- Ravinala (arbre du voyageur) -->
+  <rect x="96" y="114" width="8" height="34" rx="2" fill="#8a6a43"/>
+  <g stroke="#6e5232" stroke-width=".8" opacity=".8">
+    <line x1="96" y1="122" x2="104" y2="122"/><line x1="96" y1="130" x2="104" y2="130"/><line x1="96" y1="138" x2="104" y2="138"/>
+  </g>
+    <g transform="rotate(-75 100 116)">
+      <line x1="100" y1="116" x2="100" y2="91.8" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 91.8 C106 83.3, 107 70.4, 100 63.3 C94 70.4, 93 83.3, 100 91.8 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="91.8" x2="100" y2="63.3" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(-60 100 116)">
+      <line x1="100" y1="116" x2="100" y2="89.8" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 89.8 C106 80.6, 107 66.8, 100 59.1 C94 66.8, 93 80.6, 100 89.8 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="89.8" x2="100" y2="59.1" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(-45 100 116)">
+      <line x1="100" y1="116" x2="100" y2="87.9" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 87.9 C106 78, 107 63.1, 100 54.8 C94 63.1, 93 78, 100 87.9 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="87.9" x2="100" y2="54.8" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(-30 100 116)">
+      <line x1="100" y1="116" x2="100" y2="85.9" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 85.9 C106 75.3, 107 59.4, 100 50.5 C94 59.4, 93 75.3, 100 85.9 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="85.9" x2="100" y2="50.5" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(-15 100 116)">
+      <line x1="100" y1="116" x2="100" y2="84" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 84 C106 72.7, 107 55.7, 100 46.3 C94 55.7, 93 72.7, 100 84 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="84" x2="100" y2="46.3" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(0 100 116)">
+      <line x1="100" y1="116" x2="100" y2="82" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 82 C106 70, 107 52, 100 42 C94 52, 93 70, 100 82 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="82" x2="100" y2="42" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(15 100 116)">
+      <line x1="100" y1="116" x2="100" y2="84" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 84 C106 72.7, 107 55.7, 100 46.3 C94 55.7, 93 72.7, 100 84 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="84" x2="100" y2="46.3" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(30 100 116)">
+      <line x1="100" y1="116" x2="100" y2="85.9" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 85.9 C106 75.3, 107 59.4, 100 50.5 C94 59.4, 93 75.3, 100 85.9 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="85.9" x2="100" y2="50.5" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(45 100 116)">
+      <line x1="100" y1="116" x2="100" y2="87.9" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 87.9 C106 78, 107 63.1, 100 54.8 C94 63.1, 93 78, 100 87.9 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="87.9" x2="100" y2="54.8" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(60 100 116)">
+      <line x1="100" y1="116" x2="100" y2="89.8" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 89.8 C106 80.6, 107 66.8, 100 59.1 C94 66.8, 93 80.6, 100 89.8 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="89.8" x2="100" y2="59.1" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+    <g transform="rotate(75 100 116)">
+      <line x1="100" y1="116" x2="100" y2="91.8" stroke="#14503c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M100 91.8 C106 83.3, 107 70.4, 100 63.3 C94 70.4, 93 83.3, 100 91.8 Z" fill="#2e8b5f" stroke="#14503c" stroke-width="1"/>
+      <line x1="100" y1="91.8" x2="100" y2="63.3" stroke="#14503c" stroke-width=".8" opacity=".7"/>
+    </g>
+  <ellipse cx="100" cy="116" rx="7" ry="4.5" fill="#14503c"/>
+
+  <!-- Ruban 26 Taona -->
+  <path d="M50 146 L60 146 L60 162 L50 162 L55 154 Z" fill="#a86a1f"/>
+  <path d="M150 146 L140 146 L140 162 L150 162 L145 154 Z" fill="#a86a1f"/>
+  <rect x="58" y="142" width="84" height="18" rx="2" fill="#c9822b"/>
+  <text x="100" y="155.5" text-anchor="middle" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="12" fill="#fff" letter-spacing="1.5">26 TAONA</text>
+</svg>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
-import { api } from './api'
+import { api, session } from './api'
+import Connexion from './pages/Connexion'
 import Eleves from './pages/Eleves'
 import FicheEleve from './pages/FicheEleve'
 import Inscription from './pages/Inscription'
@@ -23,28 +24,16 @@ const MENU = [
   { to: '/parametres', label: 'Paramètres' },
 ]
 
-function Layout() {
+function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
   const [menuOuvert, setMenuOuvert] = useState(false)
   const location = useLocation()
   useEffect(() => setMenuOuvert(false), [location.pathname])
-
-  // Nom de l'établissement, défini côté Laravel (APP_ECOLE dans backend/.env)
-  const [ecole, setEcole] = useState('')
-  useEffect(() => {
-    api
-      .get('/etablissement')
-      .then((r) => {
-        setEcole(r.data.nom)
-        document.title = r.data.nom
-      })
-      .catch(() => {})
-  }, [])
 
   return (
     <div className="app">
       <aside className={`sidebar ${menuOuvert ? 'ouverte' : ''}`}>
         <div className="logo">
-          <span className="logo-marque">É</span>
+          <img className="logo-image" src="/logo.svg" alt="Logo de l'école" />
           <span>
             {ecole || 'Gestion École'}
             <small>Scolarité & caisse</small>
@@ -63,6 +52,16 @@ function Layout() {
             ),
           )}
         </nav>
+        <div className="sidebar-compte">
+          <span className="compte-avatar">{(utilisateur.name || 'A').charAt(0).toUpperCase()}</span>
+          <span className="compte-nom">
+            {utilisateur.name}
+            <small>{utilisateur.identifiant}</small>
+          </span>
+          <button className="btn-deconnexion" onClick={onDeconnexion} title="Se déconnecter">
+            Déconnexion
+          </button>
+        </div>
       </aside>
 
       <div className="principal">
@@ -81,7 +80,10 @@ function Layout() {
             <Route path="/eleves/:id" element={<FicheEleve />} />
             <Route path="/paiements/nouveau" element={<Paiement />} />
             <Route path="/paiements" element={<Journal />} />
-            <Route path="/parametres" element={<Parametres />} />
+            <Route
+              path="/parametres"
+              element={<Parametres utilisateur={utilisateur} onCompteModifie={setUtilisateur} />}
+            />
             <Route path="*" element={<p>Page introuvable.</p>} />
           </Routes>
         </main>
@@ -92,9 +94,67 @@ function Layout() {
 }
 
 export default function App() {
+  // Nom de l'établissement, défini côté Laravel (APP_ECOLE dans backend/.env)
+  const [ecole, setEcole] = useState('')
+  useEffect(() => {
+    api
+      .get('/etablissement')
+      .then((r) => {
+        setEcole(r.data.nom)
+        document.title = r.data.nom
+      })
+      .catch(() => {})
+  }, [])
+
+  // undefined : vérification en cours · null : non connecté · objet : administrateur connecté
+  const [utilisateur, setUtilisateur] = useState(session.jeton ? undefined : null)
+  const [messageConnexion, setMessageConnexion] = useState('')
+
+  useEffect(() => {
+    if (!session.jeton) return
+    api
+      .get('/moi')
+      .then((r) => setUtilisateur(r.data))
+      .catch(() => setUtilisateur(null))
+  }, [])
+
+  useEffect(() => {
+    const expiree = () => {
+      setMessageConnexion('Votre session a expiré. Veuillez vous reconnecter.')
+      setUtilisateur(null)
+    }
+    window.addEventListener('session-expiree', expiree)
+    return () => window.removeEventListener('session-expiree', expiree)
+  }, [])
+
+  const deconnecter = async () => {
+    try {
+      await api.post('/logout')
+    } catch {
+      /* jeton déjà invalide : on ferme quand même la session locale */
+    }
+    session.fermer()
+    setMessageConnexion('')
+    setUtilisateur(null)
+  }
+
+  if (utilisateur === undefined) return <div className="chargement-plein">Chargement…</div>
+
+  if (!utilisateur)
+    return (
+      <Connexion
+        ecole={ecole}
+        message={messageConnexion}
+        onConnecte={(u) => {
+          setMessageConnexion('')
+          setUtilisateur(u)
+        }}
+      />
+    )
+
   return (
     <BrowserRouter>
-      <Layout />
+      <Layout ecole={ecole} utilisateur={utilisateur} setUtilisateur={setUtilisateur} onDeconnexion={deconnecter} />
     </BrowserRouter>
   )
 }

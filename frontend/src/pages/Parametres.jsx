@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { api, ar, dateFr, lireErreur } from '../api'
+import CompteAdmin from '../components/CompteAdmin'
 import { Alerte, Badge, Champ, EnTete } from '../components/ui'
 import { useReferentiels } from '../hooks'
 
 const CLASSE_VIDE = { id: null, nom: '', ordre: '', droit_inscription: '', ecolage_mensuel: '' }
 const ANNEE_VIDE = { libelle: '', date_debut: '', date_fin: '', active: false }
 
-export default function Parametres() {
+export default function Parametres({ utilisateur, onCompteModifie }) {
   const { classes, annees, recharger } = useReferentiels()
   const [classe, setClasse] = useState(CLASSE_VIDE)
   const [annee, setAnnee] = useState(ANNEE_VIDE)
@@ -68,7 +69,7 @@ export default function Parametres() {
 
   return (
     <>
-      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et tarifs." />
+      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et tarifs, compte administrateur." />
       <Alerte type={message.type} onFermer={() => setMessage({ ...message, texte: '' })}>
         {message.texte}
       </Alerte>
@@ -203,6 +204,8 @@ export default function Parametres() {
           </form>
         </section>
       </div>
+
+      <CompteAdmin utilisateur={utilisateur} onModifie={onCompteModifie} />
     </>
   )
 }

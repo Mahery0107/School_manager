@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_EXPIRATION', 60 * 12), // session de 12 h, puis reconnexion
 
     /*
     |--------------------------------------------------------------------------
