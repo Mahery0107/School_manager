@@ -58,6 +58,7 @@ export default function Tableau() {
         <div className="stat">
           <span className="stat-label">Effectif</span>
           <span className="stat-valeur">{d.effectif}</span>
+          {d.sortis > 0 && <span className="muted petit-aide">+ {d.sortis} renvoyé(s) / parti(s)</span>}
           <span className="muted">
             {d.nouveaux} nouveaux · {d.reinscrits} réinscrits
           </span>

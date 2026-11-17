@@ -8,10 +8,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inscription extends Model
 {
-    protected $fillable = ['etudiant_id', 'classe_id', 'annee_scolaire_id', 'type', 'date_inscription'];
+    protected $fillable = [
+        'etudiant_id', 'classe_id', 'annee_scolaire_id', 'type', 'date_inscription',
+        'date_sortie', 'motif_sortie', 'remarque_sortie',
+    ];
+
+    public const MOTIFS_SORTIE = [
+        'renvoye' => 'Renvoyé',
+        'abandon' => "A quitté l'école",
+        'transfert' => 'Transféré dans une autre école',
+        'autre' => 'Autre motif',
+    ];
 
     protected $casts = [
         'date_inscription' => 'date:Y-m-d',
+        'date_sortie' => 'date:Y-m-d',
     ];
 
     public function etudiant(): BelongsTo
@@ -29,7 +40,14 @@ class Inscription extends Model
         return $this->belongsTo(AnneeScolaire::class);
     }
 
+    /** Paiements actifs (les reçus annulés ne comptent plus). */
     public function paiements(): HasMany
+    {
+        return $this->hasMany(Paiement::class)->whereNull('annule_le');
+    }
+
+    /** Tous les paiements, y compris annulés (historique). */
+    public function tousPaiements(): HasMany
     {
         return $this->hasMany(Paiement::class);
     }
@@ -61,6 +79,27 @@ class Inscription extends Model
     }
 
     /**
+     * Mois d'écolage dus : toute l'année scolaire, ou seulement jusqu'au mois de sortie de l'élève
+     * (les mois après son départ ne sont plus dus, sauf s'ils ont déjà reçu un versement).
+     *
+     * @return list<string>
+     */
+    public function moisDus(): array
+    {
+        $this->loadMissing(['anneeScolaire', 'paiements']);
+        $mois = $this->anneeScolaire->mois;
+
+        if (! $this->date_sortie) {
+            return $mois;
+        }
+
+        $limite = $this->date_sortie->format('Y-m');
+        $verses = $this->paiements->where('type', 'ecolage')->pluck('mois')->all();
+
+        return array_values(array_filter($mois, fn ($m) => $m <= $limite || in_array($m, $verses, true)));
+    }
+
+    /**
      * Situation financière : droit et mois (soldés, partiellement payés ou impayés), totaux.
      * Un mois est « en retard » s'il n'est pas soldé après son échéance (le N du mois).
      */
@@ -71,7 +110,7 @@ class Inscription extends Model
         $droit = $this->etatElement('droit');
         $aujourdhui = now()->toDateString();
 
-        $mois = collect($this->anneeScolaire->mois)->map(function ($m) use ($aujourdhui) {
+        $mois = collect($this->moisDus())->map(function ($m) use ($aujourdhui) {
             $etat = $this->etatElement('ecolage', $m);
             $echeance = self::echeance($m);
 
@@ -102,6 +141,7 @@ class Inscription extends Model
             'total_du' => $totalPaye + $reste,
             'total_paye' => $totalPaye,
             'reste' => $reste,
+            'sorti' => $this->date_sortie !== null,
         ];
     }
 

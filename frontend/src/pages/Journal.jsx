@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ar, dateFr, MODES, nomComplet } from '../api'
 import ApercuPdf from '../components/ApercuPdf'
-import Recu from '../components/Recu'
-import { EnTete, Pagination, Vide } from '../components/ui'
+import ModaleRecu from '../components/ModaleRecu'
+import { Badge, EnTete, Pagination, Vide } from '../components/ui'
 import { useDebounce } from '../hooks'
 
 export default function Journal() {
@@ -19,12 +19,13 @@ export default function Journal() {
 
   useEffect(() => setNumPage(1), [qd, du, au])
 
+  const [version, setVersion] = useState(0) // recharge la liste après une annulation
   useEffect(() => {
     api.get('/paiements', { params: { q: qd, du, au, page: numPage } }).then((r) => setPage(r.data))
-  }, [qd, du, au, numPage])
+  }, [qd, du, au, numPage, version])
 
   const ouvrir = (numero) => api.get(`/recus/${numero}`).then((r) => setRecu(r.data))
-  const totalPage = page?.data.reduce((s, r) => s + r.total, 0) || 0
+  const totalPage = page?.data.reduce((s, r) => s + (r.annule ? 0 : r.total), 0) || 0
 
   return (
     <>
@@ -62,8 +63,14 @@ export default function Journal() {
               </thead>
               <tbody>
                 {page?.data.map((r) => (
-                  <tr key={r.numero_recu} className="cliquable" onClick={() => ouvrir(r.numero_recu)}>
-                    <td className="mono">{r.numero_recu}</td>
+                  <tr
+                    key={r.numero_recu}
+                    className={`cliquable ${r.annule ? 'ligne-annulee' : ''}`}
+                    onClick={() => ouvrir(r.numero_recu)}
+                  >
+                    <td className="mono">
+                      {r.numero_recu} {r.annule && <Badge ton="danger">Annulé</Badge>}
+                    </td>
                     <td>{dateFr(r.date_paiement)}</td>
                     <td>{nomComplet(r.etudiant)}</td>
                     <td>{r.classe}</td>
@@ -75,7 +82,7 @@ export default function Journal() {
               {page?.data.length > 0 && (
                 <tfoot>
                   <tr>
-                    <td colSpan={5}>Total de la page</td>
+                    <td colSpan={5}>Total de la page (hors reçus annulés)</td>
                     <td className="num">{ar(totalPage)}</td>
                   </tr>
                 </tfoot>
@@ -87,19 +94,15 @@ export default function Journal() {
       <Pagination page={page} setPage={setNumPage} />
 
       {recu && (
-        <div className="modale-fond" onClick={() => setRecu(null)}>
-          <div className="modale" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Reçu de paiement">
-            <Recu recu={recu} />
-            <div className="form-actions no-print">
-              <button className="btn btn-ghost" onClick={() => setRecu(null)}>
-                Fermer
-              </button>
-              <button className="btn btn-primaire" onClick={() => setPdf(recu.numero_recu)}>
-                Imprimer
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModaleRecu
+          recu={recu}
+          onFermer={() => setRecu(null)}
+          onImprimer={setPdf}
+          onAnnule={(r) => {
+            setRecu(r)
+            setVersion((v) => v + 1)
+          }}
+        />
       )}
 
       {pdf && <ApercuPdf numero={pdf} onFermer={fermerPdf} />}

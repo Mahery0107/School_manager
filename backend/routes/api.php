@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EtudiantController;
 use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\PaiementController;
+use App\Http\Controllers\Api\SauvegardeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/etablissement', fn () => ['nom' => config('app.ecole')]);
@@ -41,11 +42,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reinscriptions', [InscriptionController::class, 'reinscrire']);
     Route::get('/inscriptions/{inscription}', [InscriptionController::class, 'show']);
     Route::delete('/inscriptions/{inscription}', [InscriptionController::class, 'destroy']);
+    Route::post('/inscriptions/{inscription}/sortie', [InscriptionController::class, 'sortie']);
+    Route::delete('/inscriptions/{inscription}/sortie', [InscriptionController::class, 'reintegrer']);
 
     // Paiements (droit d'inscription + écolages)
     Route::get('/paiements', [PaiementController::class, 'index']);
     Route::post('/paiements', [PaiementController::class, 'store']);
     Route::get('/recus/{numero}', [PaiementController::class, 'recu']);
     Route::get('/recus/{numero}/pdf', [PaiementController::class, 'pdf']);
+    Route::post('/recus/{numero}/annuler', [PaiementController::class, 'annuler']);
+
+    // Sauvegardes de la base
+    Route::get('/sauvegardes', [SauvegardeController::class, 'index']);
+    Route::post('/sauvegardes', [SauvegardeController::class, 'store'])->middleware('throttle:5,1');
+    Route::get('/sauvegardes/{fichier}', [SauvegardeController::class, 'telecharger']);
 
 });

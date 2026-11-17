@@ -19,6 +19,13 @@ export default function Recu({ recu }) {
         </div>
       </div>
 
+      {recu.annule && (
+        <div className="recu-annule">
+          <strong>REÇU ANNULÉ</strong> le {dateFr(recu.annule_le.slice(0, 10))} à {recu.annule_le.slice(11, 16)}
+          {recu.annule_par && ` par ${recu.annule_par}`} — motif : {recu.annule_motif}
+        </div>
+      )}
+
       <dl className="recu-infos">
         <dt>Élève</dt>
         <dd>{nomComplet(recu.etudiant)}</dd>
@@ -31,6 +38,12 @@ export default function Recu({ recu }) {
           {MODES[recu.mode]}
           {recu.reference && <span className="muted"> · réf. {recu.reference}</span>}
         </dd>
+        {recu.encaisse_par && (
+          <>
+            <dt>Encaissé par</dt>
+            <dd>{recu.encaisse_par}</dd>
+          </>
+        )}
       </dl>
 
       <table className="table recu-table">

@@ -30,6 +30,9 @@
         .lignes tfoot td { font-weight: bold; font-size: 11pt; border-top: 2px solid #1c2421; border-bottom: 0; }
         .detail { font-size: 8pt; color: #5f6b66; }
         .detail .reste-du { color: #b4382f; font-weight: bold; }
+        .annule { border: 2px solid #b4382f; color: #b4382f; padding: 6px 9px; margin-bottom: 10px; }
+        .annule strong { font-size: 13pt; letter-spacing: 2px; }
+        .filigrane { position: fixed; top: 38%; left: 0; right: 0; text-align: center; font-size: 60pt; font-weight: bold; color: #b4382f; opacity: 0.12; transform: rotate(-30deg); }
         .lettres { margin-top: 8px; font-style: italic; }
         .reste { margin-top: 10px; padding: 7px 9px; background: #f4f5f2; }
         .signatures { margin-top: 40px; }
@@ -61,6 +64,15 @@
     </table>
     <div class="trait"></div>
 
+    @if ($recu['annule'])
+        <div class="filigrane">ANNULÉ</div>
+        <div class="annule">
+            <strong>REÇU ANNULÉ</strong><br>
+            Le {{ \Carbon\Carbon::parse($recu['annule_le'])->format('d/m/Y à H:i') }}@if ($recu['annule_par']) par {{ $recu['annule_par'] }}@endif — motif : {{ $recu['annule_motif'] }}.
+            Ce reçu n'a plus de valeur.
+        </div>
+    @endif
+
     <table class="infos">
         <tr><td class="label">Élève</td><td class="valeur">{{ $recu['etudiant']->nom }} {{ $recu['etudiant']->prenom }}</td></tr>
         <tr><td class="label">Matricule</td><td class="valeur">{{ $recu['etudiant']->matricule }}</td></tr>
@@ -75,6 +87,9 @@
             <td class="label">Mode de paiement</td>
             <td>{{ $modes[$recu['mode']] ?? $recu['mode'] }}@if($recu['reference']) — réf. {{ $recu['reference'] }}@endif</td>
         </tr>
+        @if ($recu['encaisse_par'])
+            <tr><td class="label">Encaissé par</td><td>{{ $recu['encaisse_par'] }}</td></tr>
+        @endif
     </table>
 
     <table class="lignes">

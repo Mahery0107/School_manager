@@ -66,4 +66,17 @@ class AuthTest extends TestCase
         $this->postJson('/api/login', ['identifiant' => 'directeur', 'password' => 'nouveau-mdp'])->assertOk();
         $this->assertSame(1, User::count());
     }
+
+    public function test_sauvegardes_protegees(): void
+    {
+        $this->getJson('/api/sauvegardes')->assertUnauthorized();
+
+        $token = $this->postJson('/api/login', ['identifiant' => 'admin', 'password' => 'admin123'])->json('token');
+        $this->withToken($token)->getJson('/api/sauvegardes')->assertOk()->assertJsonStructure(['sauvegardes', 'conserver_jours']);
+
+        // seuls des noms de fichiers .sql / .sql.gz du dossier des sauvegardes sont téléchargeables
+        $this->withToken($token)->get('/api/sauvegardes/..%2F..%2F.env')->assertNotFound();
+        $this->withToken($token)->get('/api/sauvegardes/.env')->assertNotFound();
+        $this->withToken($token)->get('/api/sauvegardes/inexistant.sql.gz')->assertNotFound();
+    }
 }

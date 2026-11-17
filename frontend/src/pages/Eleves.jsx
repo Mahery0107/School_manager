@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ar, nomComplet, nomMois } from '../api'
+import { api, ar, MOTIFS_SORTIE, nomComplet, nomMois } from '../api'
 import { Badge, EnTete, Pagination, Vide } from '../components/ui'
 import { useDebounce, useReferentiels } from '../hooks'
 
@@ -8,6 +8,7 @@ const STATUTS = {
   paye: { libelle: 'Payé', ton: 'ok' },
   a_payer: { libelle: 'À payer', ton: 'attente' },
   en_retard: { libelle: 'En retard', ton: 'danger' },
+  non_du: { libelle: 'Non dû (parti)', ton: 'neutre' },
 }
 
 const dateCourte = (iso) => iso && `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
@@ -46,6 +47,7 @@ export default function Eleves() {
   const [classeId, setClasseId] = useState('')
   const [mois, setMois] = useState('')
   const [statut, setStatut] = useState('')
+  const [presence, setPresence] = useState('presents')
   const [q, setQ] = useState('')
   const [numPage, setNumPage] = useState(1)
   const [page, setPage] = useState(null)
@@ -57,20 +59,20 @@ export default function Eleves() {
     if (anneeActive && !anneeId) setAnneeId(String(anneeActive.id))
   }, [anneeActive]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => setNumPage(1), [qd, anneeId, classeId, mois, statut])
+  useEffect(() => setNumPage(1), [qd, anneeId, classeId, mois, statut, presence])
 
   useEffect(() => {
     if (!anneeId) return
     api
       .get('/inscriptions', {
-        params: { annee_scolaire_id: anneeId, classe_id: classeId, q: qd, page: numPage, mois, statut },
+        params: { annee_scolaire_id: anneeId, classe_id: classeId, q: qd, page: numPage, mois, statut, presence },
       })
       .then((r) => {
         setPage(r.data)
         // le serveur choisit le mois par défaut (mois en cours) : on l'affiche dans le sélecteur
         if (!mois && r.data.mois) setMois(r.data.mois)
       })
-  }, [anneeId, classeId, qd, numPage, mois, statut]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [anneeId, classeId, qd, numPage, mois, statut, presence]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const changerAnnee = (id) => {
     setAnneeId(id)
@@ -81,7 +83,10 @@ export default function Eleves() {
 
   return (
     <>
-      <EnTete titre="Élèves inscrits" sousTitre={page ? `${page.total} élève(s)` : ''}>
+      <EnTete
+        titre={presence === 'sortis' ? 'Élèves renvoyés ou partis' : 'Élèves inscrits'}
+        sousTitre={page ? `${page.total} élève(s)` : ''}
+      >
         <Link className="btn btn-ghost" to="/reinscription">
           Réinscrire
         </Link>
@@ -121,6 +126,11 @@ export default function Eleves() {
           <option value="a_payer">À payer (avant le 10)</option>
           <option value="en_retard">En retard</option>
         </select>
+        <select value={presence} onChange={(e) => setPresence(e.target.value)} aria-label="Élèves présents ou sortis">
+          <option value="presents">Élèves présents</option>
+          <option value="sortis">Renvoyés / partis</option>
+          <option value="tous">Tous les élèves</option>
+        </select>
       </div>
 
       <div className="carte sans-padding">
@@ -142,10 +152,16 @@ export default function Eleves() {
               </thead>
               <tbody>
                 {page?.data.map((i) => (
-                  <tr key={i.id}>
+                  <tr key={i.id} className={i.date_sortie ? 'ligne-sortie' : ''}>
                     <td className="mono">{i.etudiant.matricule}</td>
                     <td>
                       <Link to={`/eleves/${i.etudiant.id}`}>{nomComplet(i.etudiant)}</Link>
+                      {i.date_sortie && (
+                        <small className="bloc">
+                          <Badge ton="danger">{MOTIFS_SORTIE[i.motif_sortie] || 'Sorti(e)'}</Badge> le{' '}
+                          {i.date_sortie.split('-').reverse().join('/')}
+                        </small>
+                      )}
                       {!i.droit_paye && <small className="danger bloc">Droit d'inscription non payé</small>}
                     </td>
                     <td>{i.classe.nom}</td>

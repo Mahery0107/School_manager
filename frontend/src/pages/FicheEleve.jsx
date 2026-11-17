@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { api, ar, dateFr, lireErreur, MODES, nomComplet, nomMois } from '../api'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api, ar, dateFr, lireErreur, MODES, MOTIFS_SORTIE, nomComplet, nomMois } from '../api'
 import ChampsEleve, { ELEVE_VIDE } from '../components/ChampsEleve'
 import Situation from '../components/Situation'
+import SortieEleve from '../components/SortieEleve'
 import { Alerte, Badge, EnTete } from '../components/ui'
 
 export default function FicheEleve() {
@@ -13,6 +14,19 @@ export default function FicheEleve() {
   const [erreurs, setErreurs] = useState({})
   const [envoi, setEnvoi] = useState(false)
   const [succes, setSucces] = useState('')
+  const [sortie, setSortie] = useState(null) // inscription à retirer de l'école
+  const navigate = useNavigate()
+
+  const reintegrer = async (i) => {
+    if (!confirm(`Réintégrer ${nomComplet(eleve)} parmi les élèves présents (${i.annee_scolaire.libelle}) ?`)) return
+    try {
+      await api.delete(`/inscriptions/${i.id}/sortie`)
+      await charger()
+      setSucces('Élève réintégré : il apparaît de nouveau parmi les présents.')
+    } catch (err) {
+      setMessage(lireErreur(err).message)
+    }
+  }
 
   const charger = () =>
     api
@@ -138,14 +152,32 @@ export default function FicheEleve() {
                 {i.annee_scolaire.libelle} — {i.classe.nom}
               </strong>{' '}
               {i.type === 'inscription' ? <Badge ton="info">Inscription</Badge> : <Badge>Réinscription</Badge>}
-              {i.annee_scolaire.active && <Badge ton="ok">En cours</Badge>}
+              {i.annee_scolaire.active && !i.date_sortie && <Badge ton="ok">En cours</Badge>}
+              {i.date_sortie && <Badge ton="danger">{MOTIFS_SORTIE[i.motif_sortie] || 'Sorti(e)'}</Badge>}
               <div className="muted">Inscrit(e) le {dateFr(i.date_inscription)}</div>
+              {i.date_sortie && (
+                <div className="danger">
+                  A quitté l'école le {dateFr(i.date_sortie)}
+                  {i.remarque_sortie && ` — ${i.remarque_sortie}`}
+                </div>
+              )}
             </div>
-            {i.situation.reste > 0 && (
-              <Link className="btn btn-primaire" to={`/paiements/nouveau?inscription=${i.id}`}>
-                Encaisser
-              </Link>
-            )}
+            <div className="page-actions">
+              {i.date_sortie ? (
+                <button className="btn btn-ghost" onClick={() => reintegrer(i)}>
+                  Réintégrer
+                </button>
+              ) : (
+                <button className="btn btn-danger" onClick={() => setSortie(i)}>
+                  Retirer de l'école
+                </button>
+              )}
+              {i.situation.reste > 0 && (
+                <Link className="btn btn-primaire" to={`/paiements/nouveau?inscription=${i.id}`}>
+                  Encaisser
+                </Link>
+              )}
+            </div>
           </div>
           <Situation situation={i.situation} />
           {i.paiements.length > 0 && (
@@ -168,6 +200,23 @@ export default function FicheEleve() {
           )}
         </div>
       ))}
+
+      {sortie && (
+        <SortieEleve
+          eleve={eleve}
+          inscription={sortie}
+          onFermer={() => setSortie(null)}
+          onTermine={({ texte, eleveSupprime }) => {
+            setSortie(null)
+            if (eleveSupprime) {
+              navigate('/eleves')
+              return
+            }
+            charger()
+            setSucces(texte)
+          }}
+        />
+      )}
     </>
   )
 }

@@ -6,7 +6,7 @@ import { useDebounce } from '../hooks'
  * Champ de recherche avec liste de résultats.
  * source = 'etudiants' (tous les élèves) ou 'inscriptions' (inscrits de l'année active).
  */
-export default function RechercheEleve({ source = 'etudiants', onChoisir, placeholder, rendreDetail }) {
+export default function RechercheEleve({ source = 'etudiants', params, onChoisir, placeholder, rendreDetail }) {
   const [q, setQ] = useState('')
   const [resultats, setResultats] = useState([])
   const [charge, setCharge] = useState(false)
@@ -20,13 +20,13 @@ export default function RechercheEleve({ source = 'etudiants', onChoisir, placeh
     let actif = true
     setCharge(true)
     api
-      .get(`/${source}`, { params: { q: qd, per_page: 8 } })
+      .get(`/${source}`, { params: { ...params, q: qd, per_page: 8 } })
       .then((r) => actif && setResultats(r.data.data))
       .finally(() => actif && setCharge(false))
     return () => {
       actif = false
     }
-  }, [qd, source])
+  }, [qd, source]) // eslint-disable-line react-hooks/exhaustive-deps -- params : objet fixe passé par la page
 
   return (
     <div className="recherche">

@@ -8,6 +8,7 @@ use App\Models\Etudiant;
 use App\Models\Inscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class InscriptionController extends Controller
@@ -54,6 +55,7 @@ class InscriptionController extends Controller
         $request->validate([
             'mois' => 'nullable|date_format:Y-m',
             'statut' => 'nullable|in:paye,a_payer,en_retard,non_paye',
+            'presence' => 'nullable|in:presents,sortis,tous',
         ]);
 
         $annee = AnneeScolaire::find($request->query('annee_scolaire_id')) ?: AnneeScolaire::active();
@@ -65,15 +67,20 @@ class InscriptionController extends Controller
 
         // Mois soldé = ses versements atteignent le montant dû (paiement possible en plusieurs fois)
         $soldeSql = "exists (select 1 from paiements p where p.inscription_id = inscriptions.id
-            and p.type = 'ecolage' and p.mois = ? group by p.inscription_id having sum(p.montant) >= max(p.montant_du))";
+            and p.type = 'ecolage' and p.mois = ? and p.annule_le is null group by p.inscription_id having sum(p.montant) >= max(p.montant_du))";
         $solde = fn ($query) => $query->whereRaw($soldeSql, [$mois]);
-        $nonSolde = fn ($query) => $query->whereRaw("not $soldeSql", [$mois]);
+        // mois dû : élève présent, ou sorti pendant / après ce mois
+        $nonSolde = fn ($query) => $query->whereRaw("not $soldeSql", [$mois])
+            ->where(fn ($w) => $w->whereNull('inscriptions.date_sortie')->orWhere('inscriptions.date_sortie', '>=', "{$mois}-01"));
+        $presence = $request->query('presence', 'presents');
 
         $page = Inscription::query()
             ->with(['etudiant', 'classe', 'anneeScolaire', 'paiements'])
             ->join('etudiants', 'etudiants.id', '=', 'inscriptions.etudiant_id')
             ->where('inscriptions.annee_scolaire_id', $annee?->id)
             ->when($request->query('classe_id'), fn ($query, $c) => $query->where('inscriptions.classe_id', $c))
+            ->when($presence === 'presents', fn ($query) => $query->whereNull('inscriptions.date_sortie'))
+            ->when($presence === 'sortis', fn ($query) => $query->whereNotNull('inscriptions.date_sortie'))
             ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
                 ->where('etudiants.nom', 'like', "%{$q}%")
                 ->orWhere('etudiants.prenom', 'like', "%{$q}%")
@@ -93,6 +100,7 @@ class InscriptionController extends Controller
         $page->getCollection()->transform(function (Inscription $i) use ($mois, $echeance, $echeancePassee) {
             $s = $i->situation();
             $etat = $mois ? $i->etatElement('ecolage', $mois) : null;
+            $du = $mois && in_array($mois, $i->moisDus(), true);
             $i->setAttribute('ecolage_mois', $mois ? [
                 'mois' => $mois,
                 'echeance' => $echeance,
@@ -100,7 +108,7 @@ class InscriptionController extends Controller
                 'montant_paye' => $etat['montant_paye'],
                 'reste' => $etat['reste'],
                 'partiel' => $etat['partiel'],
-                'statut' => $etat['solde'] ? 'paye' : ($echeancePassee ? 'en_retard' : 'a_payer'),
+                'statut' => ! $du ? 'non_du' : ($etat['solde'] ? 'paye' : ($echeancePassee ? 'en_retard' : 'a_payer')),
             ] : null);
             $i->setAttribute('mois_en_retard', $s['mois_en_retard']);
             $i->setAttribute('droit_paye', $s['droit_paye']);
@@ -189,14 +197,63 @@ class InscriptionController extends Controller
         return $this->detail($inscription);
     }
 
+    /**
+     * Sortie d'un élève en cours d'année (renvoyé, a quitté l'école, transfert…).
+     * Rien n'est effacé : l'élève n'est plus compté parmi les présents et les mois après son départ ne sont plus dus.
+     */
+    public function sortie(Request $request, Inscription $inscription)
+    {
+        if ($inscription->date_sortie) {
+            throw ValidationException::withMessages(['date_sortie' => "Cet élève est déjà sorti de l'école pour cette année."]);
+        }
+
+        $data = $request->validate([
+            'motif_sortie' => ['required', Rule::in(array_keys(Inscription::MOTIFS_SORTIE))],
+            'date_sortie' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$inscription->anneeScolaire->date_debut->format('Y-m-d')],
+            'remarque_sortie' => ['nullable', 'string', 'max:255'],
+        ], [
+            'date_sortie.after_or_equal' => "La date de sortie ne peut pas précéder le début de l'année scolaire.",
+            'date_sortie.before_or_equal' => 'La date de sortie ne peut pas être dans le futur.',
+        ], ['motif_sortie' => 'motif', 'date_sortie' => 'date de sortie']);
+
+        $inscription->update($data);
+
+        return $this->detail($inscription->fresh());
+    }
+
+    /** Annule la sortie (erreur, ou élève revenu) : l'élève redevient présent. */
+    public function reintegrer(Inscription $inscription)
+    {
+        $inscription->update(['date_sortie' => null, 'motif_sortie' => null, 'remarque_sortie' => null]);
+
+        return $this->detail($inscription->fresh());
+    }
+
+    /**
+     * Suppression définitive d'une inscription faite par erreur, seulement si elle n'a jamais reçu de paiement
+     * (même annulé). Si l'élève n'a plus aucune inscription, sa fiche est supprimée aussi.
+     */
     public function destroy(Inscription $inscription)
     {
-        if ($inscription->paiements()->exists()) {
-            return response()->json(['message' => "Impossible d'annuler une inscription ayant déjà des paiements."], 422);
+        if ($inscription->tousPaiements()->exists()) {
+            return response()->json([
+                'message' => "Impossible de supprimer une inscription qui a des paiements : utilisez « Retirer de l'école ».",
+            ], 422);
         }
-        $inscription->delete();
 
-        return response()->noContent();
+        $eleveSupprime = DB::transaction(function () use ($inscription) {
+            $etudiant = $inscription->etudiant;
+            $inscription->delete();
+            if (! $etudiant->inscriptions()->exists()) {
+                $etudiant->delete();
+
+                return true;
+            }
+
+            return false;
+        });
+
+        return response()->json(['eleve_supprime' => $eleveSupprime]);
     }
 
     private function detail(Inscription $inscription): array

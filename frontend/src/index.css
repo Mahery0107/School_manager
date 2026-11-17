@@ -333,3 +333,18 @@ input:focus, select:focus { outline: none; border-color: var(--primaire); box-sh
 .ligne-versement input { text-align: right; padding: 6px 8px; }
 .badge-partiel { color: #9a5f17; }
 .petit-aide { font-size: 12px; margin: -4px 0 0; }
+
+/* ---------- Annulation d'un reçu ---------- */
+.recu-annule { border: 2px solid var(--danger); color: var(--danger); background: var(--danger-clair); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+.recu-annule strong { letter-spacing: .06em; }
+.ligne-annulee td { color: var(--encre-douce); }
+.ligne-annulee td.num { text-decoration: line-through; }
+.annulation { border-top: 1px solid var(--bordure); margin-top: 16px; padding-top: 14px; }
+.btn-danger-plein { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-danger-plein:hover { background: #962c24; }
+.btn-gauche { margin-right: auto; }
+.carte-entete { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.carte-entete .carte-titre { margin-bottom: 0; }
+.ligne-sortie td { background: #faf8f6; }
+.ligne-sortie td:first-child, .ligne-sortie td:nth-child(2) a { color: var(--encre-douce); }
+.badge-neutre { white-space: nowrap; }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, ar, dateFr, lireErreur } from '../api'
 import CompteAdmin from '../components/CompteAdmin'
+import Sauvegardes from '../components/Sauvegardes'
 import { Alerte, Badge, Champ, EnTete } from '../components/ui'
 import { useReferentiels } from '../hooks'
 
@@ -69,7 +70,7 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
 
   return (
     <>
-      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et tarifs, compte administrateur." />
+      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et tarifs, compte administrateur, sauvegardes." />
       <Alerte type={message.type} onFermer={() => setMessage({ ...message, texte: '' })}>
         {message.texte}
       </Alerte>
@@ -205,7 +206,10 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
         </section>
       </div>
 
-      <CompteAdmin utilisateur={utilisateur} onModifie={onCompteModifie} />
+      <div className="deux-colonnes">
+        <CompteAdmin utilisateur={utilisateur} onModifie={onCompteModifie} />
+        <Sauvegardes />
+      </div>
     </>
   )
 }

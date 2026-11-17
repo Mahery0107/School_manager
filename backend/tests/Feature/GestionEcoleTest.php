@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Etudiant;
+use App\Models\Inscription;
+use App\Models\Paiement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -232,6 +234,127 @@ class GestionEcoleTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('mois');
         $this->getJson('/api/inscriptions?mois=2026-11&statut=paye')->assertJsonPath('total', 1);
         $this->get('/api/recus/'.$r2->json('numero_recu').'/pdf')->assertOk();
+    }
+
+    public function test_annulation_d_un_recu(): void
+    {
+        $this->travelTo('2026-11-15 10:00');
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id');
+        $payer = fn (array $corps) => $this->postJson('/api/paiements', $corps + [
+            'inscription_id' => $id, 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ]);
+
+        $mauvais = $payer(['droit' => true, 'mois' => ['2026-11']])->assertCreated()
+            ->assertJsonPath('encaisse_par', 'Administrateur')
+            ->json('numero_recu');
+
+        // motif obligatoire
+        $this->postJson("/api/recus/{$mauvais}/annuler", [])->assertUnprocessable()->assertJsonValidationErrors('motif');
+
+        $this->postJson("/api/recus/{$mauvais}/annuler", ['motif' => 'Erreur de montant'])->assertOk()
+            ->assertJsonPath('annule', true)
+            ->assertJsonPath('annule_par', 'Administrateur')
+            ->assertJsonPath('annule_motif', 'Erreur de montant')
+            ->assertJsonPath('situation.total_paye', 0)        // le reçu annulé ne compte plus
+            ->assertJsonPath('situation.droit_paye', false);
+        $this->postJson("/api/recus/{$mauvais}/annuler", ['motif' => 'encore'])->assertUnprocessable();
+        $this->postJson('/api/recus/INEXISTANT/annuler', ['motif' => 'test'])->assertNotFound();
+
+        // le mois redevient à payer, le journal garde le reçu marqué annulé, le tableau de bord ne le compte pas
+        $this->getJson('/api/inscriptions?mois=2026-11&statut=paye')->assertJsonPath('total', 0);
+        $this->getJson('/api/paiements')->assertJsonPath('data.0.numero_recu', $mauvais)->assertJsonPath('data.0.annule', true);
+        $this->getJson('/api/dashboard')->assertJsonPath('encaisse_aujourdhui', 0);
+        $this->get("/api/recus/{$mauvais}/pdf")->assertOk();
+
+        // correction : on encaisse à nouveau, avec un nouveau numéro
+        $bon = $payer(['droit' => true, 'montants' => ['droit' => 50000]])->assertCreated()
+            ->assertJsonPath('situation.total_paye', 50000)->json('numero_recu');
+        $this->assertNotSame($mauvais, $bon);
+
+        // une inscription ayant un historique (même annulé) ne peut pas être supprimée
+        $this->deleteJson("/api/inscriptions/{$id}")->assertUnprocessable();
+    }
+
+    public function test_numeros_de_recu_uniques_et_successifs(): void
+    {
+        $this->travelTo('2026-11-16 09:00');
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id');
+        // un reçu existait déjà ce jour-là avant la mise en place du compteur
+        Paiement::create([
+            'numero_recu' => 'REC-20261116-0007', 'inscription_id' => $id, 'type' => 'ecolage', 'mois' => '2026-09',
+            'montant' => 23000, 'montant_du' => 23000, 'mode' => 'especes', 'date_paiement' => '2026-11-16',
+        ]);
+
+        $numeros = collect(['2026-10', '2026-11', '2026-12'])->map(fn ($m) => $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'mois' => [$m], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertCreated()->json('numero_recu'))->all();
+
+        $this->assertSame(['REC-20261116-0008', 'REC-20261116-0009', 'REC-20261116-0010'], $numeros);
+
+        // nouveau jour : la numérotation repart à 0001
+        $this->travelTo('2026-11-17 08:00');
+        $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'mois' => ['2027-01'], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertJsonPath('numero_recu', 'REC-20261117-0001');
+    }
+
+    public function test_sortie_d_un_eleve_renvoye_ou_parti(): void
+    {
+        $this->travelTo('2026-12-15');
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // CM2, 23 000 / mois
+        $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'droit' => true, 'mois' => ['2026-09', '2026-10'],
+            'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertCreated();
+
+        // motif et date obligatoires, date pas dans le futur
+        $this->postJson("/api/inscriptions/{$id}/sortie", [])->assertUnprocessable()
+            ->assertJsonValidationErrors(['motif_sortie', 'date_sortie']);
+        $this->postJson("/api/inscriptions/{$id}/sortie", ['motif_sortie' => 'renvoye', 'date_sortie' => '2027-01-05'])
+            ->assertUnprocessable()->assertJsonValidationErrors('date_sortie');
+
+        // renvoyé le 20 novembre : septembre → novembre restent dus, décembre → juin ne le sont plus
+        $s = $this->postJson("/api/inscriptions/{$id}/sortie", [
+            'motif_sortie' => 'renvoye', 'date_sortie' => '2026-11-20', 'remarque_sortie' => 'Conseil de discipline',
+        ])->assertOk()->assertJsonPath('motif_sortie', 'renvoye')->json('situation');
+        $this->assertSame(['2026-09', '2026-10', '2026-11'], array_column($s['mois'], 'mois'));
+        $this->assertSame(23000, $s['reste']);   // novembre seul reste à payer
+        $this->assertTrue($s['sorti']);
+        $this->postJson("/api/inscriptions/{$id}/sortie", ['motif_sortie' => 'abandon', 'date_sortie' => '2026-11-21'])
+            ->assertUnprocessable();
+
+        // plus parmi les présents ni dans l'effectif, mais visible dans les sortis
+        $this->getJson('/api/inscriptions?q=Rabe')->assertJsonPath('total', 0);
+        $this->getJson('/api/inscriptions?q=Rabe&presence=sortis')->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.ecolage_mois.statut', 'non_du');   // décembre (mois en cours)
+        $this->getJson('/api/inscriptions?q=Rabe&presence=tous&mois=2026-11&statut=en_retard')->assertJsonPath('total', 1);
+        $this->getJson('/api/inscriptions?q=Rabe&presence=tous&mois=2026-12&statut=non_paye')->assertJsonPath('total', 0);
+        $this->getJson('/api/dashboard')->assertJsonPath('effectif', 0)->assertJsonPath('sortis', 1);
+
+        // les mois après le départ ne peuvent plus être encaissés, les mois dus si
+        $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'mois' => ['2026-12'], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('mois');
+        $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'mois' => ['2026-11'], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertCreated()->assertJsonPath('situation.reste', 0);
+
+        // une inscription avec paiements ne peut pas être supprimée ; réintégration possible
+        $this->deleteJson("/api/inscriptions/{$id}")->assertUnprocessable();
+        $this->deleteJson("/api/inscriptions/{$id}/sortie")->assertOk()
+            ->assertJsonPath('date_sortie', null)
+            ->assertJsonCount(10, 'situation.mois');
+        $this->getJson('/api/dashboard')->assertJsonPath('effectif', 1);
+    }
+
+    public function test_suppression_d_une_inscription_faite_par_erreur(): void
+    {
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id');
+        $etudiantId = Inscription::find($id)->etudiant_id;
+
+        // aucun paiement : suppression définitive de l'inscription et de la fiche de l'élève
+        $this->deleteJson("/api/inscriptions/{$id}")->assertOk()->assertJsonPath('eleve_supprime', true);
+        $this->assertDatabaseMissing('etudiants', ['id' => $etudiantId]);
     }
 
     public function test_grille_des_classes(): void

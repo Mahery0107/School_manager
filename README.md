@@ -85,12 +85,12 @@ Vite redirige automatiquement vers Laravel les appels faits à `/api`.
 |---|---|
 | **Tableau de bord** | Effectif, sommes encaissées, élèves en retard, répartition par classe |
 | **Élèves** | Liste des inscrits par année et par classe, avec le **statut de l'écolage du mois** (Payé / À payer avant le 10 / En retard). Filtres par mois et par statut |
-| **Fiche élève** | Identité, parents (père et mère), historique des inscriptions, situation financière, modification |
+| **Fiche élève** | Identité, parents (père et mère), historique des inscriptions, situation financière, modification, **retrait de l'école** (renvoyé, parti) et réintégration |
 | **Inscription** | Nouvel élève : le matricule est attribué automatiquement, puis l'élève est inscrit pour l'année choisie |
 | **Réinscription** | Ancien élève : la classe supérieure est proposée. La 3ème est la classe finale |
 | **Paiement** | Droit d'inscription et/ou plusieurs mois d'écolage en un seul reçu |
-| **Journal** | Liste des reçus, avec réimpression |
-| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs, **compte administrateur** (nom, identifiant, mot de passe) |
+| **Journal** | Liste des reçus, avec réimpression et **annulation** (reçus annulés barrés) |
+| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs, **compte administrateur** (nom, identifiant, mot de passe), **sauvegardes** (liste, sauvegarde immédiate, téléchargement) |
 
 **Bouton « Imprimer »** : le reçu s'ouvre d'abord en **PDF** dans une fenêtre d'aperçu. Vous pouvez ensuite l'**imprimer** ou le **télécharger**.
 
@@ -129,6 +129,14 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 - Un élève n'a qu'**une seule inscription par année scolaire**.
 - Une réinscription n'est possible que si l'élève a déjà été inscrit une année précédente.
 
+### Élève renvoyé ou qui a quitté l'école
+
+- Sur la fiche de l'élève, cliquez sur **Retirer de l'école**, puis indiquez le motif (renvoyé, a quitté l'école, transféré, autre), la date de départ et une remarque si besoin.
+- **Rien n'est effacé.** L'élève disparaît de la liste des présents et de l'effectif. Il reste consultable avec le filtre **Renvoyés / partis** de la liste des élèves.
+- Les écolages **après le mois de départ** ne sont plus dus. Ce qui restait à payer jusqu'à son départ reste dû et peut encore être encaissé.
+- **Réintégrer** annule le retrait, en cas d'erreur ou si l'élève revient.
+- Une inscription faite **par erreur et sans aucun paiement** peut être supprimée définitivement. La fiche de l'élève est supprimée aussi s'il n'a pas d'autre inscription.
+
 ### Fiche élève (parents)
 
 - Pour chaque parent : nom, profession et téléphone.
@@ -137,6 +145,9 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 ### Paiements et reçus
 
 - Les montants dus sont **calculés par le serveur** à partir des tarifs de la classe. À la caisse, on saisit seulement le montant versé (laisser vide = tout le reste).
+- **Annuler un reçu** (erreur de saisie) : ouvrir le reçu, puis **Annuler ce reçu** et donner un motif obligatoire. Le reçu reste dans le journal, marqué ANNULÉ avec la date, l'auteur et le motif. Il ne compte plus, et les éléments payés redeviennent à payer. Pour **corriger**, on annule puis on encaisse à nouveau le bon montant.
+- Les numéros de reçu sont **garantis uniques**, même si deux postes encaissent à la même seconde : un compteur par jour est verrouillé pendant l'encaissement.
+- Chaque reçu indique **qui a encaissé**. Les dates et les heures sont celles de Madagascar (`APP_TIMEZONE`, UTC+3 par défaut).
 - Sur le reçu, chaque versement partiel indique ce qui a déjà été versé et le reste à payer.
 - Les reçus suivent le format `REC-AAAAMMJJ-0001`. Un même reçu peut regrouper le droit d'inscription et plusieurs mois.
 - Modes de paiement : espèces, mobile money, chèque, virement. Une **référence** est obligatoire pour tout mode autre que les espèces.
@@ -149,10 +160,14 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 >
 > - Ne **jamais** lancer `php artisan migrate:fresh`, `migrate:refresh` ou `db:seed` : ces commandes effacent ou mélangent les données. Seul `ClasseSeeder` peut être relancé sans risque.
 > - Pour une mise à jour du code, `php artisan migrate` suffit : il n'ajoute que les nouvelles tables ou colonnes.
-> - **Sauvegardez régulièrement** : phpMyAdmin → base `school_manager` → onglet **Exporter** → **Exécuter**. Faites-le aussi avant toute mise à jour.
+> - **Sauvegarde automatique chaque soir** à 23 h 30 (`php artisan ecole:sauvegarde`), dans `backend/storage/app/sauvegardes/`, conservée 30 jours. Elle nécessite le planificateur : un cron sur le serveur (voir [DEPLOIEMENT.md](DEPLOIEMENT.md)). Sauvegarde immédiate et téléchargement : **Paramètres → Sauvegardes**. Téléchargez-en une chaque semaine et gardez-la hors du serveur.
 > - **Restaurer une sauvegarde** : phpMyAdmin → `school_manager` → onglet **Importer**, puis choisir le fichier `.sql`.
 
 L'ancien fichier `backend/database/database.sqlite` n'est plus utilisé. C'est une ancienne copie, d'avant le passage à MySQL.
+
+## Mise en ligne (VPS)
+
+Voir **[DEPLOIEMENT.md](DEPLOIEMENT.md)** : installation sur Ubuntu 24.04 avec Nginx, PHP-FPM, MySQL et HTTPS, cron de sauvegarde, mise à jour en une commande (`deploy/mise-a-jour.sh`).
 
 ## 8. Tests
 
@@ -184,10 +199,14 @@ Toutes les routes sauf `/api/etablissement` et `/api/login` exigent d'être conn
 | GET | `/api/inscriptions?annee_scolaire_id=&classe_id=&mois=AAAA-MM&statut=` | Inscrits avec le statut de l'écolage du mois (`paye`, `a_payer`, `en_retard`, `non_paye`) |
 | POST | `/api/inscriptions` | Inscription d'un nouvel élève |
 | POST | `/api/reinscriptions` | Réinscription d'un ancien élève |
-| GET, DELETE | `/api/inscriptions/{id}` | Inscription avec sa situation financière, suppression |
+| GET, DELETE | `/api/inscriptions/{id}` | Inscription avec sa situation financière, suppression (seulement si aucun paiement) |
+| POST, DELETE | `/api/inscriptions/{id}/sortie` | Retirer l'élève de l'école (`motif_sortie`, `date_sortie`, `remarque_sortie`), ou le réintégrer |
 | GET, POST | `/api/paiements` | Journal des reçus, encaissement |
 | GET | `/api/recus/{numero}` | Détail d'un reçu |
 | GET | `/api/recus/{numero}/pdf` | Reçu au format PDF (A5) |
+| POST | `/api/recus/{numero}/annuler` | Annuler un reçu (`motif` obligatoire) |
+| GET, POST | `/api/sauvegardes` | Liste des sauvegardes, sauvegarde immédiate |
+| GET | `/api/sauvegardes/{fichier}` | Télécharger une sauvegarde |
 
 ### Organisation du code
 

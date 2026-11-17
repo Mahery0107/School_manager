@@ -24,7 +24,9 @@ class PaiementController extends Controller
                 DB::raw('SUM(montant) as total'),
                 DB::raw('MIN(date_paiement) as date_paiement'),
                 DB::raw('MIN(mode) as mode'),
-                DB::raw('MIN(inscription_id) as inscription_id')
+                DB::raw('MIN(inscription_id) as inscription_id'),
+                DB::raw('MAX(annule_le) as annule_le'),
+                DB::raw('MAX(encaisse_par) as encaisse_par')
             )
             ->when($request->query('du'), fn ($query, $d) => $query->whereDate('date_paiement', '>=', $d))
             ->when($request->query('au'), fn ($query, $d) => $query->whereDate('date_paiement', '<=', $d))
@@ -47,6 +49,8 @@ class PaiementController extends Controller
             'total' => (int) $r->total,
             'date_paiement' => substr((string) $r->date_paiement, 0, 10),
             'mode' => $r->mode,
+            'annule' => $r->annule_le !== null,
+            'encaisse_par' => $r->encaisse_par,
             'etudiant' => $inscriptions->get($r->inscription_id)?->etudiant,
             'classe' => $inscriptions->get($r->inscription_id)?->classe?->nom,
         ]));
@@ -75,7 +79,7 @@ class PaiementController extends Controller
         ], [
             'reference.required_unless' => 'La référence est obligatoire pour ce mode de paiement.',
             'montants.*.min' => 'Le montant versé doit être supérieur à 0.',
-            'montants.*.integer' => 'Le montant versé doit être un nombre entier d\x27Ariary.',
+            'montants.*.integer' => "Le montant versé doit être un nombre entier d'Ariary.",
         ]);
 
         $payerDroit = (bool) ($data['droit'] ?? false);
@@ -89,7 +93,7 @@ class PaiementController extends Controller
             ]);
         }
 
-        $numero = DB::transaction(function () use ($data, $payerDroit, $mois, $montants) {
+        $numero = DB::transaction(function () use ($request, $data, $payerDroit, $mois, $montants) {
             $inscription = Inscription::with(['classe', 'anneeScolaire'])
                 ->lockForUpdate()->findOrFail($data['inscription_id']);
             $inscription->load('paiements'); // versements à jour, lus sous verrou
@@ -98,10 +102,12 @@ class PaiementController extends Controller
             if ($payerDroit) {
                 $elements[] = ['type' => 'droit', 'mois' => null, 'cle' => 'droit', 'libelle' => "le droit d'inscription"];
             }
-            $moisValides = $inscription->anneeScolaire->mois;
+            $moisValides = $inscription->moisDus();
             foreach ($mois as $m) {
                 if (! in_array($m, $moisValides, true)) {
-                    throw ValidationException::withMessages(['mois' => "Le mois {$m} ne fait pas partie de l'année scolaire."]);
+                    throw ValidationException::withMessages(['mois' => in_array($m, $inscription->anneeScolaire->mois, true)
+                        ? "L'écolage du mois {$m} n'est pas dû : l'élève a quitté l'école le {$inscription->date_sortie->format('d/m/Y')}."
+                        : "Le mois {$m} ne fait pas partie de l'année scolaire."]);
                 }
                 $elements[] = ['type' => 'ecolage', 'mois' => $m, 'cle' => $m, 'libelle' => "l'écolage du mois {$m}"];
             }
@@ -112,6 +118,7 @@ class PaiementController extends Controller
                 'mode' => $data['mode'],
                 'reference' => $data['reference'] ?? null,
                 'date_paiement' => $data['date_paiement'],
+                'encaisse_par' => $request->user()?->name,
             ];
 
             foreach ($elements as $e) {
@@ -146,6 +153,35 @@ class PaiementController extends Controller
         return response()->json($this->construireRecu($numero), 201);
     }
 
+    /**
+     * Annule un reçu entier (erreur de saisie, mauvais élève, mauvais montant…).
+     * Les lignes restent en base avec le motif, la date et l'auteur de l'annulation, mais ne comptent plus :
+     * les éléments redeviennent à payer. Pour corriger, on annule puis on encaisse à nouveau.
+     */
+    public function annuler(Request $request, string $numero)
+    {
+        $data = $request->validate([
+            'motif' => ['required', 'string', 'min:3', 'max:255'],
+        ], [], ['motif' => "motif de l'annulation"]);
+
+        DB::transaction(function () use ($request, $numero, $data) {
+            $lignes = Paiement::where('numero_recu', $numero)->lockForUpdate()->get();
+            abort_if($lignes->isEmpty(), 404, 'Reçu introuvable.');
+
+            if ($lignes->whereNotNull('annule_le')->isNotEmpty()) {
+                throw ValidationException::withMessages(['motif' => 'Ce reçu est déjà annulé.']);
+            }
+
+            Paiement::where('numero_recu', $numero)->update([
+                'annule_le' => now(),
+                'annule_par' => $request->user()?->name,
+                'annule_motif' => $data['motif'],
+            ]);
+        });
+
+        return $this->construireRecu($numero);
+    }
+
     /** Détail d'un reçu (affichage / impression). */
     public function recu(string $numero)
     {
@@ -178,14 +214,19 @@ class PaiementController extends Controller
             'date_paiement' => $premiere->date_paiement->format('Y-m-d'),
             'mode' => $premiere->mode,
             'reference' => $premiere->reference,
+            'encaisse_par' => $premiere->encaisse_par,
+            'annule' => $premiere->annule_le !== null,
+            'annule_le' => $premiere->annule_le?->format('Y-m-d H:i'),
+            'annule_par' => $premiere->annule_par,
+            'annule_motif' => $premiere->annule_motif,
             'inscription_id' => $inscription->id,
             'etudiant' => $inscription->etudiant,
             'classe' => $inscription->classe->nom,
             'annee_scolaire' => $inscription->anneeScolaire->libelle,
             'lignes' => $lignes->map(function (Paiement $l) use ($inscription) {
-                // cumul des versements de cet élément jusqu'à ce reçu inclus
-                $cumul = (int) $inscription->paiements
-                    ->filter(fn (Paiement $p) => $p->type === $l->type && $p->mois === $l->mois && $p->id <= $l->id)
+                // versements actifs antérieurs sur le même élément (hors reçus annulés)
+                $deja = (int) $inscription->paiements
+                    ->filter(fn (Paiement $p) => $p->type === $l->type && $p->mois === $l->mois && $p->id < $l->id)
                     ->sum('montant');
 
                 return [
@@ -193,8 +234,8 @@ class PaiementController extends Controller
                     'mois' => $l->mois,
                     'montant' => $l->montant,
                     'montant_du' => $l->montant_du,
-                    'deja_paye' => $cumul - $l->montant,
-                    'reste_apres' => max(0, $l->montant_du - $cumul),
+                    'deja_paye' => $deja,
+                    'reste_apres' => max(0, $l->montant_du - $deja - $l->montant),
                 ];
             })->values(),
             'total' => (int) $lignes->sum('montant'),

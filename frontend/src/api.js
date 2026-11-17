@@ -88,4 +88,13 @@ export const MODES = {
   virement: 'Virement',
 }
 
-export const aujourdhui = () => new Date().toISOString().slice(0, 10)
+/** Motifs de sortie d'un élève en cours d'année (identiques à Inscription::MOTIFS_SORTIE côté Laravel). */
+export const MOTIFS_SORTIE = {
+  renvoye: 'Renvoyé',
+  abandon: "A quitté l'école",
+  transfert: 'Transféré dans une autre école',
+  autre: 'Autre motif',
+}
+
+// date du jour en heure locale (toISOString donnerait la veille entre minuit et 3 h à Madagascar)
+export const aujourdhui = () => new Date().toLocaleDateString('sv-SE')

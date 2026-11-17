@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, ar, aujourdhui, lireErreur, MODES, nomComplet, nomMois } from '../api'
 import ApercuPdf from '../components/ApercuPdf'
-import Recu from '../components/Recu'
+import ModaleRecu from '../components/ModaleRecu'
 import RechercheEleve from '../components/RechercheEleve'
 import Situation from '../components/Situation'
 import { Alerte, Champ, EnTete } from '../components/ui'
@@ -106,8 +106,9 @@ export default function Paiement() {
           <h3 className="carte-titre">Rechercher un élève inscrit cette année</h3>
           <RechercheEleve
             source="inscriptions"
+            params={{ presence: 'tous' }}
             onChoisir={(i) => setParams({ inscription: i.id })}
-            rendreDetail={(i) => i.classe.nom}
+            rendreDetail={(i) => (i.date_sortie ? `${i.classe.nom} · parti(e)` : i.classe.nom)}
           />
         </div>
       )}
@@ -230,19 +231,15 @@ export default function Paiement() {
       )}
 
       {recu && (
-        <div className="modale-fond" onClick={() => setRecu(null)}>
-          <div className="modale" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Reçu de paiement">
-            <Recu recu={recu} />
-            <div className="form-actions no-print">
-              <button className="btn btn-ghost" onClick={() => setRecu(null)}>
-                Fermer
-              </button>
-              <button className="btn btn-primaire" onClick={() => setPdf(recu.numero_recu)}>
-                Imprimer le reçu
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModaleRecu
+          recu={recu}
+          onFermer={() => setRecu(null)}
+          onImprimer={setPdf}
+          onAnnule={(r) => {
+            setRecu(r)
+            setInscription((i) => ({ ...i, situation: r.situation }))
+          }}
+        />
       )}
 
       {pdf && <ApercuPdf numero={pdf} onFermer={fermerPdf} />}

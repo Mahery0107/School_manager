@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Indian/Antananarivo'), // heure de Madagascar (UTC+3)
 
     /*
     |--------------------------------------------------------------------------
@@ -84,6 +84,13 @@ return [
     'ecole' => env('APP_ECOLE', 'Établissement scolaire'),
 
     // Jour limite de paiement de l'écolage de chaque mois (ex : 10 = au plus tard le 10 du mois)
+    // Sauvegarde automatique de la base (php artisan ecole:sauvegarde, planifiée chaque jour)
+    'sauvegarde' => [
+        'mysqldump' => env('MYSQLDUMP_PATH', 'mysqldump'),
+        'heure' => env('SAUVEGARDE_HEURE', '23:30'),
+        'conserver_jours' => (int) env('SAUVEGARDE_JOURS', 30),
+    ],
+
     'jour_limite_ecolage' => (int) env('JOUR_LIMITE_ECOLAGE', 10),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
