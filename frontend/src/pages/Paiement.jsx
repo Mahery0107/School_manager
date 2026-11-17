@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api, ar, aujourdhui, lireErreur, MODES, nomComplet } from '../api'
+import { api, ar, aujourdhui, lireErreur, MODES, nomComplet, nomMois } from '../api'
 import ApercuPdf from '../components/ApercuPdf'
 import Recu from '../components/Recu'
 import RechercheEleve from '../components/RechercheEleve'
@@ -13,6 +13,8 @@ export default function Paiement() {
   const [inscription, setInscription] = useState(null)
   const [droit, setDroit] = useState(false)
   const [mois, setMois] = useState([])
+  // montant saisi par élément (clé 'droit' ou 'YYYY-MM') ; vide = tout le reste à payer
+  const [montants, setMontants] = useState({})
   const [mode, setMode] = useState('especes')
   const [reference, setReference] = useState('')
   const [date, setDate] = useState(aujourdhui())
@@ -32,13 +34,34 @@ export default function Paiement() {
   useEffect(() => {
     setDroit(false)
     setMois([])
+    setMontants({})
     setErreurs({})
     if (inscriptionId) charger(inscriptionId)
     else setInscription(null)
   }, [inscriptionId])
 
   const s = inscription?.situation
-  const total = s ? (droit ? s.droit_inscription : 0) + mois.length * s.ecolage_mensuel : 0
+  // Éléments sélectionnés, avec leur reste à payer (paiement possible en plusieurs fois)
+  const elements = s
+    ? [
+        ...(droit ? [{ cle: 'droit', libelle: "Droit d'inscription", ...s.droit }] : []),
+        ...mois.map((m) => ({ cle: m, libelle: `Écolage ${nomMois(m)}`, ...s.mois.find((x) => x.mois === m) })),
+      ]
+    : []
+  const montantDe = (e) => (montants[e.cle] === undefined || montants[e.cle] === '' ? e.reste : Number(montants[e.cle]))
+  const erreurMontant = (e) => {
+    const v = montantDe(e)
+    if (!Number.isInteger(v) || v <= 0) return 'Montant invalide'
+    if (v > e.reste) return `Maximum ${ar(e.reste)}`
+    return ''
+  }
+  const total = elements.reduce((t, e) => t + (montantDe(e) || 0), 0)
+  const saisieInvalide = elements.some((e) => erreurMontant(e))
+  const viderSelection = () => {
+    setMois([])
+    setDroit(false)
+    setMontants({})
+  }
 
   const basculer = (m) => setMois((l) => (l.includes(m) ? l.filter((x) => x !== m) : [...l, m].sort()))
 
@@ -55,14 +78,14 @@ export default function Paiement() {
         inscription_id: inscription.id,
         droit,
         mois,
+        montants: Object.fromEntries(elements.map((e) => [e.cle, montantDe(e)])),
         mode,
         reference: mode === 'especes' ? null : reference,
         date_paiement: date,
       })
       setRecu(data)
       setInscription({ ...inscription, situation: data.situation })
-      setDroit(false)
-      setMois([])
+      viderSelection()
       setReference('')
     } catch (err) {
       const { message, champs } = lireErreur(err)
@@ -128,10 +151,7 @@ export default function Paiement() {
                 <button
                   type="button"
                   className="btn btn-petit btn-ghost"
-                  onClick={() => {
-                    setMois([])
-                    setDroit(false)
-                  }}
+                  onClick={viderSelection}
                 >
                   Effacer
                 </button>
@@ -143,20 +163,42 @@ export default function Paiement() {
           <form className="carte caisse" onSubmit={soumettre}>
             <h3 className="carte-titre">Règlement</h3>
             <ul className="caisse-lignes">
-              {droit && (
-                <li>
-                  <span>Droit d'inscription</span>
-                  <span>{ar(s.droit_inscription)}</span>
-                </li>
-              )}
-              {mois.length > 0 && (
-                <li>
-                  <span>Écolage × {mois.length} mois</span>
-                  <span>{ar(mois.length * s.ecolage_mensuel)}</span>
-                </li>
-              )}
-              {!droit && mois.length === 0 && <li className="muted">Aucun élément sélectionné.</li>}
+              {elements.map((e) => {
+                const montant = montantDe(e)
+                const err = erreurMontant(e) || erreurs.montants
+                return (
+                  <li key={e.cle} className="ligne-versement">
+                    <span>{e.libelle}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={e.reste}
+                      step="1"
+                      inputMode="numeric"
+                      value={montants[e.cle] ?? ''}
+                      placeholder={String(e.reste)}
+                      onChange={(ev) => setMontants({ ...montants, [e.cle]: ev.target.value })}
+                      aria-label={`Montant versé pour ${e.libelle}`}
+                    />
+                    <small className={erreurMontant(e) ? 'danger' : 'muted'}>
+                      {erreurMontant(e)
+                        ? err
+                        : montant < e.reste
+                          ? `Versement partiel — il restera ${ar(e.reste - montant)} sur ${ar(e.montant_du)}`
+                          : e.montant_paye > 0
+                            ? `Solde (déjà versé ${ar(e.montant_paye)} sur ${ar(e.montant_du)})`
+                            : `Paiement complet`}
+                    </small>
+                  </li>
+                )
+              })}
+              {elements.length === 0 && <li className="muted">Aucun élément sélectionné.</li>}
             </ul>
+            {elements.length > 0 && (
+              <p className="muted petit-aide">
+                Le parent peut payer en plusieurs fois : saisissez le montant versé (vide = tout le reste).
+              </p>
+            )}
             <div className="caisse-total">
               <span>Total</span>
               <strong>{ar(total)}</strong>
@@ -180,7 +222,7 @@ export default function Paiement() {
               <input type="date" value={date} max={aujourdhui()} onChange={(e) => setDate(e.target.value)} />
             </Champ>
 
-            <button className="btn btn-primaire btn-bloc" disabled={envoi || total === 0}>
+            <button className="btn btn-primaire btn-bloc" disabled={envoi || total === 0 || saisieInvalide}>
               {envoi ? 'Enregistrement…' : `Encaisser ${ar(total)}`}
             </button>
           </form>

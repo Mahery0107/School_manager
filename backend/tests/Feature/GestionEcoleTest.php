@@ -187,6 +187,53 @@ class GestionEcoleTest extends TestCase
         $this->getJson('/api/etudiants?q=Rak')->assertOk()->assertJsonPath('data.0.derniere_inscription.annee_scolaire.libelle', '2025-2026');
     }
 
+    public function test_paiement_en_plusieurs_fois(): void
+    {
+        $this->travelTo('2026-11-15');
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // CM2 : 23 000 / mois
+        $payer = fn (array $corps) => $this->postJson('/api/paiements', $corps + [
+            'inscription_id' => $id, 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ]);
+
+        // 1er versement : 100 000 sur le droit (220 000) et 10 000 sur novembre (23 000)
+        $r1 = $payer(['droit' => true, 'mois' => ['2026-11'], 'montants' => ['droit' => 100000, '2026-11' => 10000]])
+            ->assertCreated()
+            ->assertJsonPath('total', 110000)
+            ->assertJsonPath('situation.droit_paye', false)
+            ->assertJsonPath('situation.droit.reste', 120000);
+        $nov = collect($r1->json('situation.mois'))->firstWhere('mois', '2026-11');
+        $this->assertSame([false, true, 10000, 13000], [$nov['paye'], $nov['partiel'], $nov['montant_paye'], $nov['reste']]);
+        $this->assertSame(13000, collect($r1->json('lignes'))->firstWhere('mois', '2026-11')['reste_apres']);
+
+        // un mois partiellement payé reste « en retard » / non payé dans la liste
+        $this->getJson('/api/inscriptions?mois=2026-11&statut=paye')->assertJsonPath('total', 0);
+        $this->getJson('/api/inscriptions?mois=2026-11&statut=en_retard')->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.ecolage_mois.montant_paye', 10000)
+            ->assertJsonPath('data.0.ecolage_mois.reste', 13000);
+
+        // on ne peut pas verser plus que le reste
+        $payer(['mois' => ['2026-11'], 'montants' => ['2026-11' => 14000]])
+            ->assertUnprocessable()->assertJsonValidationErrors('montants.2026-11');
+        $payer(['droit' => true, 'montants' => ['droit' => 0]])->assertUnprocessable();
+
+        // un changement de tarif ne modifie pas un élément déjà entamé
+        Classe::where('nom', 'CM2')->update(['ecolage_mensuel' => 30000]);
+
+        // 2e versement sans montant : solde exactement le reste
+        $r2 = $payer(['droit' => true, 'mois' => ['2026-11']])->assertCreated()
+            ->assertJsonPath('total', 120000 + 13000)
+            ->assertJsonPath('situation.droit_paye', true);
+        $this->assertTrue(collect($r2->json('situation.mois'))->firstWhere('mois', '2026-11')['paye']);
+        $this->assertSame(0, collect($r2->json('lignes'))->firstWhere('type', 'droit')['reste_apres']);
+        $this->assertSame(100000, collect($r2->json('lignes'))->firstWhere('type', 'droit')['deja_paye']);
+
+        // élément soldé : plus aucun versement accepté
+        $payer(['mois' => ['2026-11'], 'montants' => ['2026-11' => 1000]])
+            ->assertUnprocessable()->assertJsonValidationErrors('mois');
+        $this->getJson('/api/inscriptions?mois=2026-11&statut=paye')->assertJsonPath('total', 1);
+        $this->get('/api/recus/'.$r2->json('numero_recu').'/pdf')->assertOk();
+    }
+
     public function test_grille_des_classes(): void
     {
         $classes = $this->getJson('/api/classes')->assertOk()->json();

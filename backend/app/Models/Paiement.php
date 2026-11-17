@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Paiement extends Model
 {
     protected $fillable = [
-        'numero_recu', 'inscription_id', 'type', 'mois', 'montant', 'mode', 'reference', 'date_paiement',
+        'numero_recu', 'inscription_id', 'type', 'mois', 'montant', 'montant_du', 'mode', 'reference', 'date_paiement',
     ];
 
     protected $casts = [
         'montant' => 'integer',
+        'montant_du' => 'integer',
         'date_paiement' => 'date:Y-m-d',
     ];
 

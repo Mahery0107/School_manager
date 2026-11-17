@@ -8,10 +8,12 @@ const dateCourte = (iso) => {
 /**
  * Situation financière d'une inscription : droit + grille des mois (septembre → juin).
  * Chaque mois indique son échéance (au plus tard le 10) ou « En retard » si elle est dépassée.
+ * Un élément peut être payé en plusieurs fois : « Partiel » + reste à payer tant qu'il n'est pas soldé.
  */
 export default function Situation({ situation, selection, onBasculer, droitSelectionne, onBasculerDroit }) {
   if (!situation) return null
   const interactif = Boolean(onBasculer)
+  const d = situation.droit
   const pct = situation.total_du ? Math.round((situation.total_paye / situation.total_du) * 100) : 0
 
   return (
@@ -46,32 +48,52 @@ export default function Situation({ situation, selection, onBasculer, droitSelec
       <div className="grille-mois">
         <button
           type="button"
-          className={`case case-droit ${situation.droit_paye ? 'payee' : ''} ${droitSelectionne ? 'choisie' : ''}`}
-          disabled={!interactif || situation.droit_paye}
+          className={`case case-droit ${d.solde ? 'payee' : d.partiel ? 'partielle' : ''} ${droitSelectionne ? 'choisie' : ''}`}
+          disabled={!interactif || d.solde}
           onClick={onBasculerDroit}
-          title={situation.droit_paye ? 'Droit déjà payé' : `Droit d'inscription : ${ar(situation.droit_inscription)}`}
+          title={
+            d.solde
+              ? `Droit payé : ${ar(d.montant_du)}`
+              : `Droit d'inscription : ${ar(d.montant_du)}${d.partiel ? ` — déjà versé ${ar(d.montant_paye)}, reste ${ar(d.reste)}` : ''}`
+          }
         >
           <span className="case-titre">Droit</span>
-          <span className="case-montant">{ar(situation.droit_inscription)}</span>
-          <span className="case-etat">{situation.droit_paye ? '✓ Payé' : droitSelectionne ? 'Sélectionné' : 'À payer'}</span>
+          <span className="case-montant">{d.partiel ? `reste ${ar(d.reste)}` : ar(d.montant_du)}</span>
+          <span className="case-etat">
+            {d.solde ? '✓ Payé' : droitSelectionne ? 'Sélectionné' : d.partiel ? 'Partiel' : 'À payer'}
+          </span>
         </button>
 
-        {situation.mois.map(({ mois, paye, echeance, en_retard }) => {
+        {situation.mois.map(({ mois, paye, partiel, montant_du, montant_paye, reste, echeance, en_retard }) => {
           const choisie = selection?.includes(mois)
-          const etat = paye ? '✓ Payé' : choisie ? 'Sélectionné' : en_retard ? 'En retard' : `Avant le ${dateCourte(echeance)}`
+          const etat = paye
+            ? '✓ Payé'
+            : choisie
+              ? 'Sélectionné'
+              : en_retard
+                ? partiel
+                  ? 'Partiel · retard'
+                  : 'En retard'
+                : partiel
+                  ? 'Partiel'
+                  : `Avant le ${dateCourte(echeance)}`
           return (
             <button
               type="button"
               key={mois}
-              className={`case ${paye ? 'payee' : ''} ${en_retard ? 'retard' : ''} ${choisie ? 'choisie' : ''}`}
+              className={`case ${paye ? 'payee' : ''} ${partiel ? 'partielle' : ''} ${en_retard ? 'retard' : ''} ${choisie ? 'choisie' : ''}`}
               disabled={!interactif || paye}
               onClick={() => onBasculer(mois)}
               title={`${nomMois(mois)} — ${
-                paye ? 'payé' : `${ar(situation.ecolage_mensuel)}, à payer au plus tard le ${dateCourte(echeance)}`
+                paye
+                  ? `payé (${ar(montant_du)})`
+                  : partiel
+                    ? `déjà versé ${ar(montant_paye)} sur ${ar(montant_du)}, reste ${ar(reste)} — avant le ${dateCourte(echeance)}`
+                    : `${ar(montant_du)}, à payer au plus tard le ${dateCourte(echeance)}`
               }`}
             >
               <span className="case-titre">{moisCourt(mois)}</span>
-              <span className="case-montant">{mois.slice(0, 4)}</span>
+              <span className="case-montant">{partiel ? `reste ${ar(reste)}` : mois.slice(0, 4)}</span>
               <span className="case-etat">{etat}</span>
             </button>
           )

@@ -63,7 +63,11 @@ class InscriptionController extends Controller
         $echeancePassee = $echeance && now()->toDateString() > $echeance;
         $statut = $request->query('statut');
 
-        $paye = fn ($query) => $query->where('type', 'ecolage')->where('mois', $mois);
+        // Mois soldé = ses versements atteignent le montant dû (paiement possible en plusieurs fois)
+        $soldeSql = "exists (select 1 from paiements p where p.inscription_id = inscriptions.id
+            and p.type = 'ecolage' and p.mois = ? group by p.inscription_id having sum(p.montant) >= max(p.montant_du))";
+        $solde = fn ($query) => $query->whereRaw($soldeSql, [$mois]);
+        $nonSolde = fn ($query) => $query->whereRaw("not $soldeSql", [$mois]);
 
         $page = Inscription::query()
             ->with(['etudiant', 'classe', 'anneeScolaire', 'paiements'])
@@ -74,13 +78,13 @@ class InscriptionController extends Controller
                 ->where('etudiants.nom', 'like', "%{$q}%")
                 ->orWhere('etudiants.prenom', 'like', "%{$q}%")
                 ->orWhere('etudiants.matricule', 'like', "%{$q}%")))
-            ->when($mois && $statut === 'paye', fn ($query) => $query->whereHas('paiements', $paye))
-            ->when($mois && $statut === 'non_paye', fn ($query) => $query->whereDoesntHave('paiements', $paye))
+            ->when($mois && $statut === 'paye', $solde)
+            ->when($mois && $statut === 'non_paye', $nonSolde)
             ->when($mois && $statut === 'a_payer', fn ($query) => $echeancePassee
                 ? $query->whereRaw('1 = 0')
-                : $query->whereDoesntHave('paiements', $paye))
+                : $nonSolde($query))
             ->when($mois && $statut === 'en_retard', fn ($query) => $echeancePassee
-                ? $query->whereDoesntHave('paiements', $paye)
+                ? $nonSolde($query)
                 : $query->whereRaw('1 = 0'))
             ->orderBy('etudiants.nom')->orderBy('etudiants.prenom')
             ->select('inscriptions.*')
@@ -88,12 +92,15 @@ class InscriptionController extends Controller
 
         $page->getCollection()->transform(function (Inscription $i) use ($mois, $echeance, $echeancePassee) {
             $s = $i->situation();
-            $estPaye = $mois && $i->paiements->where('type', 'ecolage')->where('mois', $mois)->isNotEmpty();
+            $etat = $mois ? $i->etatElement('ecolage', $mois) : null;
             $i->setAttribute('ecolage_mois', $mois ? [
                 'mois' => $mois,
                 'echeance' => $echeance,
-                'montant' => $i->classe->ecolage_mensuel,
-                'statut' => $estPaye ? 'paye' : ($echeancePassee ? 'en_retard' : 'a_payer'),
+                'montant' => $etat['montant_du'],
+                'montant_paye' => $etat['montant_paye'],
+                'reste' => $etat['reste'],
+                'partiel' => $etat['partiel'],
+                'statut' => $etat['solde'] ? 'paye' : ($echeancePassee ? 'en_retard' : 'a_payer'),
             ] : null);
             $i->setAttribute('mois_en_retard', $s['mois_en_retard']);
             $i->setAttribute('droit_paye', $s['droit_paye']);

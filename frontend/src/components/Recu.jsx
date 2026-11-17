@@ -6,9 +6,12 @@ export default function Recu({ recu }) {
   return (
     <div className="recu">
       <div className="recu-entete">
-        <div>
-          <div className="recu-ecole">{recu.ecole}</div>
-          <div className="muted">Reçu de paiement — Année {recu.annee_scolaire}</div>
+        <div className="recu-identite">
+          <img className="recu-logo" src="/logo.svg" alt="Logo de l'école" />
+          <div>
+            <div className="recu-ecole">{recu.ecole}</div>
+            <div className="muted">Reçu de paiement — Année {recu.annee_scolaire}</div>
+          </div>
         </div>
         <div className="recu-numero">
           <span className="muted">N°</span> <span className="mono">{recu.numero_recu}</span>
@@ -40,7 +43,18 @@ export default function Recu({ recu }) {
         <tbody>
           {recu.lignes.map((l, i) => (
             <tr key={i}>
-              <td>{l.type === 'droit' ? "Droit d'inscription" : `Écolage — ${nomMois(l.mois)}`}</td>
+              <td>
+                {l.type === 'droit' ? "Droit d'inscription" : `Écolage — ${nomMois(l.mois)}`}
+                {l.reste_apres > 0 ? (
+                  <small className="bloc muted">
+                    Versement partiel sur {ar(l.montant_du)}
+                    {l.deja_paye > 0 && ` (déjà versé : ${ar(l.deja_paye)})`} —{' '}
+                    <span className="danger">reste {ar(l.reste_apres)}</span>
+                  </small>
+                ) : (
+                  l.deja_paye > 0 && <small className="bloc muted">Solde — {ar(l.montant_du)} entièrement payé</small>
+                )}
+              </td>
               <td className="num">{ar(l.montant)}</td>
             </tr>
           ))}

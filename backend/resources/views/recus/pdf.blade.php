@@ -9,6 +9,10 @@
         table { width: 100%; border-collapse: collapse; }
         .entete td { vertical-align: top; padding-bottom: 8px; }
         .ecole { font-size: 15pt; font-weight: bold; color: #1f6f54; text-align: center; }
+        .bandeau td { vertical-align: middle; }
+        .bandeau .logo { width: 22mm; }
+        .bandeau .logo img { width: 20mm; height: 20mm; }
+        .bandeau .ecole { padding-right: 22mm; } /* garde le nom centré sur la page */
         .trait-fin { border-top: 1px solid #1f6f54; margin: 6px 0 10px; }
         .numero .num { white-space: nowrap; }
         .muted { color: #5f6b66; }
@@ -24,6 +28,8 @@
         .lignes td { padding: 6px 8px; border-bottom: 1px solid #e2e5e0; }
         .lignes .montant { text-align: right; white-space: nowrap; }
         .lignes tfoot td { font-weight: bold; font-size: 11pt; border-top: 2px solid #1c2421; border-bottom: 0; }
+        .detail { font-size: 8pt; color: #5f6b66; }
+        .detail .reste-du { color: #b4382f; font-weight: bold; }
         .lettres { margin-top: 8px; font-style: italic; }
         .reste { margin-top: 10px; padding: 7px 9px; background: #f4f5f2; }
         .signatures { margin-top: 40px; }
@@ -33,7 +39,13 @@
     </style>
 </head>
 <body>
-    <div class="ecole">{{ $ecole }}</div>
+    @php($logo = base64_encode(file_get_contents(resource_path('images/logo.png'))))
+    <table class="bandeau">
+        <tr>
+            <td class="logo"><img src="data:image/png;base64,{{ $logo }}" alt="Logo"></td>
+            <td class="ecole">{{ $ecole }}</td>
+        </tr>
+    </table>
     <div class="trait-fin"></div>
     <table class="entete">
         <tr>
@@ -77,6 +89,12 @@
                             Droit d'inscription
                         @else
                             Écolage — {{ ucfirst(\Carbon\Carbon::createFromFormat('Y-m-d', $ligne['mois'].'-01')->locale('fr')->translatedFormat('F Y')) }}
+                        @endif
+                        @php($fmt = fn ($n) => number_format($n, 0, ',', ' ').' Ar')
+                        @if ($ligne['reste_apres'] > 0)
+                            <div class="detail">Versement partiel sur {{ $fmt($ligne['montant_du']) }}@if ($ligne['deja_paye'] > 0) (déjà versé : {{ $fmt($ligne['deja_paye']) }})@endif — <span class="reste-du">reste {{ $fmt($ligne['reste_apres']) }}</span></div>
+                        @elseif ($ligne['deja_paye'] > 0)
+                            <div class="detail">Solde — {{ $fmt($ligne['montant_du']) }} entièrement payé</div>
                         @endif
                     </td>
                     <td class="montant">{{ number_format($ligne['montant'], 0, ',', ' ') }} Ar</td>

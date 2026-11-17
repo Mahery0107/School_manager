@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, nomComplet, nomMois } from '../api'
+import { api, ar, nomComplet, nomMois } from '../api'
 import { Badge, EnTete, Pagination, Vide } from '../components/ui'
 import { useDebounce, useReferentiels } from '../hooks'
 
@@ -24,6 +24,11 @@ function StatutEcolage({ ligne }) {
         {e.statut === 'paye' ? '✓ ' : e.statut === 'en_retard' ? '⚠ ' : ''}
         {s.libelle}
       </Badge>
+      {e.partiel && (
+        <small className="badge-partiel">
+          Partiel : {ar(e.montant_paye)} versé, reste {ar(e.reste)}
+        </small>
+      )}
       {e.statut === 'a_payer' && <small className="muted">avant le {dateCourte(e.echeance)}</small>}
       {autresRetards > 0 && (
         <small className="danger">

@@ -35,46 +35,71 @@ class Inscription extends Model
     }
 
     /**
-     * Situation financière : droit payé ?, mois payés / impayés, totaux.
-     * Un élément déjà payé est soldé au montant encaissé ; seuls les éléments restants
-     * sont valorisés au tarif actuel de la classe (un changement de tarif ne touche pas le passé).
+     * État d'un élément à payer (droit d'inscription, ou écolage d'un mois YYYY-MM).
+     * Un élément peut être réglé en plusieurs versements. Son montant dû est figé au premier versement
+     * (montant_du) ; tant qu'il n'est pas entamé, il suit le tarif actuel de la classe.
+     *
+     * @return array{montant_du:int, montant_paye:int, reste:int, solde:bool, partiel:bool}
+     */
+    public function etatElement(string $type, ?string $mois = null): array
+    {
+        $this->loadMissing(['classe', 'paiements']);
+
+        $versements = $this->paiements->filter(fn (Paiement $p) => $p->type === $type && $p->mois === $mois);
+        $tarif = $type === 'droit' ? $this->classe->droit_inscription : $this->classe->ecolage_mensuel;
+        $du = $versements->isNotEmpty() ? (int) $versements->max('montant_du') : (int) $tarif;
+        $paye = (int) $versements->sum('montant');
+        $reste = max(0, $du - $paye);
+
+        return [
+            'montant_du' => $du,
+            'montant_paye' => $paye,
+            'reste' => $reste,
+            'solde' => $reste === 0,
+            'partiel' => $paye > 0 && $reste > 0,
+        ];
+    }
+
+    /**
+     * Situation financière : droit et mois (soldés, partiellement payés ou impayés), totaux.
+     * Un mois est « en retard » s'il n'est pas soldé après son échéance (le N du mois).
      */
     public function situation(): array
     {
         $this->loadMissing(['classe', 'anneeScolaire', 'paiements']);
 
-        $moisScolaires = $this->anneeScolaire->mois;
-        $moisPayes = $this->paiements->where('type', 'ecolage')->pluck('mois')->all();
-        $droitPaye = $this->paiements->where('type', 'droit')->isNotEmpty();
-
-        $moisRestants = count(array_diff($moisScolaires, $moisPayes));
-        $reste = ($droitPaye ? 0 : $this->classe->droit_inscription) + $moisRestants * $this->classe->ecolage_mensuel;
-        $totalPaye = (int) $this->paiements->sum('montant');
-        $totalDu = $totalPaye + $reste;
-
-        // Échéance : l'écolage d'un mois doit être payé au plus tard le N du mois (config app.jour_limite_ecolage).
+        $droit = $this->etatElement('droit');
         $aujourdhui = now()->toDateString();
-        $mois = collect($moisScolaires)->map(function ($m) use ($moisPayes, $aujourdhui) {
-            $paye = in_array($m, $moisPayes, true);
+
+        $mois = collect($this->anneeScolaire->mois)->map(function ($m) use ($aujourdhui) {
+            $etat = $this->etatElement('ecolage', $m);
             $echeance = self::echeance($m);
 
             return [
                 'mois' => $m,
-                'paye' => $paye,
+                'paye' => $etat['solde'],
+                'partiel' => $etat['partiel'],
+                'montant_du' => $etat['montant_du'],
+                'montant_paye' => $etat['montant_paye'],
+                'reste' => $etat['reste'],
                 'echeance' => $echeance,
-                'en_retard' => ! $paye && $aujourdhui > $echeance,
+                'en_retard' => ! $etat['solde'] && $aujourdhui > $echeance,
             ];
         });
-        $moisEnRetard = $mois->where('en_retard', true)->count();
+
+        $enRetard = $mois->where('en_retard', true);
+        $totalPaye = (int) $this->paiements->sum('montant');
+        $reste = $droit['reste'] + (int) $mois->sum('reste');
 
         return [
-            'droit_inscription' => $this->classe->droit_inscription,
+            'droit_inscription' => $droit['montant_du'],
             'ecolage_mensuel' => $this->classe->ecolage_mensuel,
-            'droit_paye' => $droitPaye,
-            'mois' => $mois->all(),
-            'mois_en_retard' => $moisEnRetard,
-            'montant_en_retard' => $moisEnRetard * $this->classe->ecolage_mensuel,
-            'total_du' => $totalDu,
+            'droit_paye' => $droit['solde'],
+            'droit' => $droit,
+            'mois' => $mois->values()->all(),
+            'mois_en_retard' => $enRetard->count(),
+            'montant_en_retard' => (int) $enRetard->sum('reste'),
+            'total_du' => $totalPaye + $reste,
             'total_paye' => $totalPaye,
             'reste' => $reste,
         ];

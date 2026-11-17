@@ -118,8 +118,10 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 
 - L'année scolaire va de **septembre à juin**, soit 10 mois d'écolage.
 - L'écolage d'un mois se paie **au plus tard le 10** de ce mois. Passé cette date, le mois est marqué **En retard**.
-- Le droit d'inscription se paie **une seule fois par année**.
-- Un même mois ne peut jamais être payé deux fois.
+- Le droit d'inscription est dû **une fois par année**.
+- **Paiement en plusieurs fois** : le droit et chaque mois peuvent être réglés petit à petit, par versements successifs, jusqu'au montant exact. Un élément entamé est marqué **Partiel** avec son reste à payer. Un mois partiellement payé après le 10 reste **En retard**.
+- Un versement ne peut jamais dépasser le reste à payer de l'élément. Une fois soldé, l'élément n'accepte plus de paiement.
+- Le montant dû d'un élément est figé au premier versement : un changement de tarif ne touche que les éléments pas encore entamés.
 
 ### Élèves et inscriptions
 
@@ -134,7 +136,8 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 
 ### Paiements et reçus
 
-- Les montants sont **calculés par le serveur** à partir des tarifs de la classe. Ils ne peuvent pas être saisis à la main.
+- Les montants dus sont **calculés par le serveur** à partir des tarifs de la classe. À la caisse, on saisit seulement le montant versé (laisser vide = tout le reste).
+- Sur le reçu, chaque versement partiel indique ce qui a déjà été versé et le reste à payer.
 - Les reçus suivent le format `REC-AAAAMMJJ-0001`. Un même reçu peut regrouper le droit d'inscription et plusieurs mois.
 - Modes de paiement : espèces, mobile money, chèque, virement. Une **référence** est obligatoire pour tout mode autre que les espèces.
 
