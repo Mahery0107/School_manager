@@ -6,14 +6,13 @@ const dateCourte = (iso) => {
 }
 
 /**
- * Situation financière d'une inscription : droit + grille des mois (septembre → juin).
+ * Situation financière d'une inscription : frais de l'année (assurance, FRAM, t-shirt…) + grille des mois (septembre → juin).
  * Chaque mois indique son échéance (au plus tard le 10) ou « En retard » si elle est dépassée.
  * Un élément peut être payé en plusieurs fois : « Partiel » + reste à payer tant qu'il n'est pas soldé.
  */
-export default function Situation({ situation, selection, onBasculer, droitSelectionne, onBasculerDroit }) {
+export default function Situation({ situation, selection, onBasculer, fraisSelection, onBasculerFrais }) {
   if (!situation) return null
   const interactif = Boolean(onBasculer)
-  const d = situation.droit
   const pct = situation.total_du ? Math.round((situation.total_paye / situation.total_du) * 100) : 0
 
   return (
@@ -45,25 +44,57 @@ export default function Situation({ situation, selection, onBasculer, droitSelec
         </div>
       )}
 
-      <div className="grille-mois">
-        <button
-          type="button"
-          className={`case case-droit ${d.solde ? 'payee' : d.partiel ? 'partielle' : ''} ${droitSelectionne ? 'choisie' : ''}`}
-          disabled={!interactif || d.solde}
-          onClick={onBasculerDroit}
-          title={
-            d.solde
-              ? `Droit payé : ${ar(d.montant_du)}`
-              : `Droit d'inscription : ${ar(d.montant_du)}${d.partiel ? ` — déjà versé ${ar(d.montant_paye)}, reste ${ar(d.reste)}` : ''}`
-          }
-        >
-          <span className="case-titre">Droit</span>
-          <span className="case-montant">{d.partiel ? `reste ${ar(d.reste)}` : ar(d.montant_du)}</span>
-          <span className="case-etat">
-            {d.solde ? '✓ Payé' : droitSelectionne ? 'Sélectionné' : d.partiel ? 'Partiel' : 'À payer'}
-          </span>
-        </button>
+      <h4 className="situation-sous-titre">Frais de l'année</h4>
+      <div className="grille-frais">
+        {situation.frais.map((f) => {
+          const paye = f.solde && f.montant_paye > 0
+          const choisie = fraisSelection?.includes(f.cle)
+          const etat = paye
+            ? '✓ Payé'
+            : choisie
+              ? 'Sélectionné'
+              : !f.payable
+                ? 'Famille'
+                : f.partiel
+                  ? 'Partiel'
+                  : f.facultatif
+                    ? 'Facultatif'
+                    : 'À payer'
+          const classes = [
+            'case case-frais',
+            paye && 'payee',
+            f.partiel && 'partielle',
+            f.facultatif && !f.montant_paye && 'facultative',
+            !f.payable && !paye && 'famille',
+            choisie && 'choisie',
+          ]
+          return (
+            <button
+              type="button"
+              key={f.cle}
+              className={classes.filter(Boolean).join(' ')}
+              disabled={!interactif || !f.payable}
+              onClick={() => onBasculerFrais(f.cle)}
+              title={[
+                `${f.libelle} : ${ar(f.montant_du)}`,
+                f.partiel && `déjà versé ${ar(f.montant_paye)}, reste ${ar(f.reste)}`,
+                f.note,
+              ]
+                .filter(Boolean)
+                .join(' — ')}
+            >
+              <span className="case-titre">{f.libelle}</span>
+              <span className="case-montant">{f.partiel ? `reste ${ar(f.reste)}` : ar(f.montant_du)}</span>
+              <span className="case-etat">{etat}</span>
+              {f.note && !choisie && <span className="case-note">{f.note}</span>}
+            </button>
+          )
+        })}
+        {situation.frais.length === 0 && <p className="muted">Aucun frais pour cette inscription.</p>}
+      </div>
 
+      <h4 className="situation-sous-titre">Écolage mensuel ({ar(situation.ecolage_mensuel)} / mois)</h4>
+      <div className="grille-mois">
         {situation.mois.map(({ mois, paye, partiel, montant_du, montant_paye, reste, echeance, en_retard }) => {
           const choisie = selection?.includes(mois)
           const etat = paye

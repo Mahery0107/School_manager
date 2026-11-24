@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { api, ar, dateFr, lireErreur } from '../api'
 import CompteAdmin from '../components/CompteAdmin'
+import FournituresParametres from '../components/FournituresParametres'
+import FraisParametres from '../components/FraisParametres'
 import Sauvegardes from '../components/Sauvegardes'
 import { Alerte, Badge, Champ, EnTete } from '../components/ui'
 import { useReferentiels } from '../hooks'
 
-const CLASSE_VIDE = { id: null, nom: '', ordre: '', droit_inscription: '', ecolage_mensuel: '' }
+const CLASSE_VIDE = { id: null, nom: '', ordre: '', ecolage_mensuel: '' }
 const ANNEE_VIDE = { libelle: '', date_debut: '', date_fin: '', active: false }
 
 export default function Parametres({ utilisateur, onCompteModifie }) {
@@ -70,7 +72,7 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
 
   return (
     <>
-      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et tarifs, compte administrateur, sauvegardes." />
+      <EnTete titre="Paramètres" sousTitre="Années scolaires, classes et écolage, frais de l'année, fournitures, compte administrateur, sauvegardes." />
       <Alerte type={message.type} onFermer={() => setMessage({ ...message, texte: '' })}>
         {message.texte}
       </Alerte>
@@ -138,13 +140,12 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
         </section>
 
         <section className="carte">
-          <h3 className="carte-titre">Classes et tarifs</h3>
+          <h3 className="carte-titre">Classes et écolage mensuel</h3>
           <div className="table-scroll">
             <table className="table">
               <thead>
                 <tr>
                   <th>Classe</th>
-                  <th className="num">Droit</th>
                   <th className="num">Écolage / mois</th>
                   <th></th>
                 </tr>
@@ -153,7 +154,6 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
                 {classes.map((c) => (
                   <tr key={c.id}>
                     <td>{c.nom}</td>
-                    <td className="num">{ar(c.droit_inscription)}</td>
                     <td className="num">{ar(c.ecolage_mensuel)}</td>
                     <td className="num actions-ligne">
                       <button className="btn btn-petit" onClick={() => setClasse(c)}>
@@ -177,14 +177,6 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
               <Champ label="Ordre (niveau)" requis erreur={erreurs.ordre}>
                 <input type="number" min="0" value={classe.ordre} onChange={(e) => setClasse({ ...classe, ordre: e.target.value })} />
               </Champ>
-              <Champ label="Droit d'inscription (Ar)" requis erreur={erreurs.droit_inscription}>
-                <input
-                  type="number"
-                  min="0"
-                  value={classe.droit_inscription}
-                  onChange={(e) => setClasse({ ...classe, droit_inscription: e.target.value })}
-                />
-              </Champ>
               <Champ label="Écolage mensuel (Ar)" requis erreur={erreurs.ecolage_mensuel}>
                 <input
                   type="number"
@@ -205,6 +197,10 @@ export default function Parametres({ utilisateur, onCompteModifie }) {
           </form>
         </section>
       </div>
+
+      <FraisParametres classes={classes} />
+
+      <FournituresParametres classes={classes} annees={annees} />
 
       <div className="deux-colonnes">
         <CompteAdmin utilisateur={utilisateur} onModifie={onCompteModifie} />

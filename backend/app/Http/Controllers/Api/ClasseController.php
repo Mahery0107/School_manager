@@ -41,7 +41,6 @@ class ClasseController extends Controller
         return $request->validate([
             'nom' => ['required', 'string', 'max:50', Rule::unique('classes', 'nom')->ignore($classe)],
             'ordre' => 'required|integer|min:0',
-            'droit_inscription' => 'required|integer|min:0',
             'ecolage_mensuel' => 'required|integer|min:0',
         ]);
     }

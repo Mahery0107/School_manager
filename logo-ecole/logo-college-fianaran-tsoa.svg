@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Logo Collège Fianaran-Tsoa Ambohimiandra — Mitsinjo ny ho avy soa">
+  <title>Collège Fianaran-Tsoa Ambohimiandra — Mitsinjo ny ho avy soa</title>
+  <defs>
+    <clipPath id="bas-du-cercle"><rect x="0" y="117" width="240" height="125"/></clipPath>
+    <path id="arc-devise" d="M 43.9 155.7 A 81 81 0 0 0 196.1 155.7"/>
+  </defs>
+
+  <!-- fond blanc : lisible sur le menu sombre comme sur papier -->
+  <circle cx="120" cy="120" r="119" fill="#ffffff"/>
+
+  <!-- cercle rouge (partie basse, le haut est couronné par le ravinala) -->
+  <circle cx="120" cy="128" r="92" fill="none" stroke="#b3322a" stroke-width="6.5" clip-path="url(#bas-du-cercle)"/>
+
+  <!-- ravinala -->
+  <g transform="translate(120 104) rotate(-96)">
+    <path d="M-2.4 0 L-1.3 -35.3 L1.3 -35.3 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -35.3 C10.8 -39.3 12.0 -49.3 11.8 -82.3 C11.4 -94.0 5.4 -98.0 0 -98.0 C-5.4 -98.0 -11.4 -94.0 -11.8 -82.3 C-12.0 -49.3 -10.8 -39.3 0 -35.3 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -42.3 L10.6 -47.3 M0 -42.3 L-10.6 -47.3 M0 -48.8 L10.6 -53.8 M0 -48.8 L-10.6 -53.8 M0 -55.3 L10.6 -60.3 M0 -55.3 L-10.6 -60.3 M0 -61.8 L10.6 -66.8 M0 -61.8 L-10.6 -66.8 M0 -68.3 L10.6 -73.3 M0 -68.3 L-10.6 -73.3 M0 -74.8 L10.6 -79.8 M0 -74.8 L-10.6 -79.8 M0 -81.3 L10.6 -86.3 M0 -81.3 L-10.6 -86.3 M0 -87.8 L10.6 -92.8 M0 -87.8 L-10.6 -92.8 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -35.3 L0 -95" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -53.1 L5.4 -57.1 M-13.0 -64.4 L-5.4 -68.4 M13.0 -73.2 L5.4 -77.2 M-13.0 -83.2 L-5.4 -87.2 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(96)">
+    <path d="M-2.4 0 L-1.3 -35.3 L1.3 -35.3 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -35.3 C10.8 -39.3 12.0 -49.3 11.8 -82.3 C11.4 -94.0 5.4 -98.0 0 -98.0 C-5.4 -98.0 -11.4 -94.0 -11.8 -82.3 C-12.0 -49.3 -10.8 -39.3 0 -35.3 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -42.3 L10.6 -47.3 M0 -42.3 L-10.6 -47.3 M0 -48.8 L10.6 -53.8 M0 -48.8 L-10.6 -53.8 M0 -55.3 L10.6 -60.3 M0 -55.3 L-10.6 -60.3 M0 -61.8 L10.6 -66.8 M0 -61.8 L-10.6 -66.8 M0 -68.3 L10.6 -73.3 M0 -68.3 L-10.6 -73.3 M0 -74.8 L10.6 -79.8 M0 -74.8 L-10.6 -79.8 M0 -81.3 L10.6 -86.3 M0 -81.3 L-10.6 -86.3 M0 -87.8 L10.6 -92.8 M0 -87.8 L-10.6 -92.8 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -35.3 L0 -95" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -53.1 L5.4 -57.1 M-13.0 -64.4 L-5.4 -68.4 M13.0 -73.2 L5.4 -77.2 M-13.0 -83.2 L-5.4 -87.2 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(-64)">
+    <path d="M-2.4 0 L-1.3 -33.1 L1.3 -33.1 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -33.1 C10.8 -37.1 12.0 -47.1 11.8 -77.3 C11.4 -88.0 5.4 -92.0 0 -92.0 C-5.4 -92.0 -11.4 -88.0 -11.8 -77.3 C-12.0 -47.1 -10.8 -37.1 0 -33.1 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -40.1 L10.6 -45.1 M0 -40.1 L-10.6 -45.1 M0 -46.6 L10.6 -51.6 M0 -46.6 L-10.6 -51.6 M0 -53.1 L10.6 -58.1 M0 -53.1 L-10.6 -58.1 M0 -59.6 L10.6 -64.6 M0 -59.6 L-10.6 -64.6 M0 -66.1 L10.6 -71.1 M0 -66.1 L-10.6 -71.1 M0 -72.6 L10.6 -77.6 M0 -72.6 L-10.6 -77.6 M0 -79.1 L10.6 -84.1 M0 -79.1 L-10.6 -84.1 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -33.1 L0 -89" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -49.8 L5.4 -53.8 M-13.0 -60.4 L-5.4 -64.4 M13.0 -68.6 L5.4 -72.6 M-13.0 -78.0 L-5.4 -82.0 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(64)">
+    <path d="M-2.4 0 L-1.3 -33.1 L1.3 -33.1 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -33.1 C10.8 -37.1 12.0 -47.1 11.8 -77.3 C11.4 -88.0 5.4 -92.0 0 -92.0 C-5.4 -92.0 -11.4 -88.0 -11.8 -77.3 C-12.0 -47.1 -10.8 -37.1 0 -33.1 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -40.1 L10.6 -45.1 M0 -40.1 L-10.6 -45.1 M0 -46.6 L10.6 -51.6 M0 -46.6 L-10.6 -51.6 M0 -53.1 L10.6 -58.1 M0 -53.1 L-10.6 -58.1 M0 -59.6 L10.6 -64.6 M0 -59.6 L-10.6 -64.6 M0 -66.1 L10.6 -71.1 M0 -66.1 L-10.6 -71.1 M0 -72.6 L10.6 -77.6 M0 -72.6 L-10.6 -77.6 M0 -79.1 L10.6 -84.1 M0 -79.1 L-10.6 -84.1 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -33.1 L0 -89" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -49.8 L5.4 -53.8 M-13.0 -60.4 L-5.4 -64.4 M13.0 -68.6 L5.4 -72.6 M-13.0 -78.0 L-5.4 -82.0 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(-32)">
+    <path d="M-2.4 0 L-1.3 -33.1 L1.3 -33.1 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -33.1 C10.8 -37.1 12.0 -47.1 11.8 -77.3 C11.4 -88.0 5.4 -92.0 0 -92.0 C-5.4 -92.0 -11.4 -88.0 -11.8 -77.3 C-12.0 -47.1 -10.8 -37.1 0 -33.1 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -40.1 L10.6 -45.1 M0 -40.1 L-10.6 -45.1 M0 -46.6 L10.6 -51.6 M0 -46.6 L-10.6 -51.6 M0 -53.1 L10.6 -58.1 M0 -53.1 L-10.6 -58.1 M0 -59.6 L10.6 -64.6 M0 -59.6 L-10.6 -64.6 M0 -66.1 L10.6 -71.1 M0 -66.1 L-10.6 -71.1 M0 -72.6 L10.6 -77.6 M0 -72.6 L-10.6 -77.6 M0 -79.1 L10.6 -84.1 M0 -79.1 L-10.6 -84.1 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -33.1 L0 -89" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -49.8 L5.4 -53.8 M-13.0 -60.4 L-5.4 -64.4 M13.0 -68.6 L5.4 -72.6 M-13.0 -78.0 L-5.4 -82.0 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(32)">
+    <path d="M-2.4 0 L-1.3 -33.1 L1.3 -33.1 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -33.1 C10.8 -37.1 12.0 -47.1 11.8 -77.3 C11.4 -88.0 5.4 -92.0 0 -92.0 C-5.4 -92.0 -11.4 -88.0 -11.8 -77.3 C-12.0 -47.1 -10.8 -37.1 0 -33.1 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -40.1 L10.6 -45.1 M0 -40.1 L-10.6 -45.1 M0 -46.6 L10.6 -51.6 M0 -46.6 L-10.6 -51.6 M0 -53.1 L10.6 -58.1 M0 -53.1 L-10.6 -58.1 M0 -59.6 L10.6 -64.6 M0 -59.6 L-10.6 -64.6 M0 -66.1 L10.6 -71.1 M0 -66.1 L-10.6 -71.1 M0 -72.6 L10.6 -77.6 M0 -72.6 L-10.6 -77.6 M0 -79.1 L10.6 -84.1 M0 -79.1 L-10.6 -84.1 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -33.1 L0 -89" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -49.8 L5.4 -53.8 M-13.0 -60.4 L-5.4 -64.4 M13.0 -68.6 L5.4 -72.6 M-13.0 -78.0 L-5.4 -82.0 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(120 104) rotate(0)">
+    <path d="M-2.4 0 L-1.3 -33.1 L1.3 -33.1 L2.4 0 Z" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+    <path d="M0 -33.1 C10.8 -37.1 12.0 -47.1 11.8 -77.3 C11.4 -88.0 5.4 -92.0 0 -92.0 C-5.4 -92.0 -11.4 -88.0 -11.8 -77.3 C-12.0 -47.1 -10.8 -37.1 0 -33.1 Z" fill="#2f8f3e" stroke="#1c6a2b" stroke-width="1.1"/>
+    <path d="M0 -40.1 L10.6 -45.1 M0 -40.1 L-10.6 -45.1 M0 -46.6 L10.6 -51.6 M0 -46.6 L-10.6 -51.6 M0 -53.1 L10.6 -58.1 M0 -53.1 L-10.6 -58.1 M0 -59.6 L10.6 -64.6 M0 -59.6 L-10.6 -64.6 M0 -66.1 L10.6 -71.1 M0 -66.1 L-10.6 -71.1 M0 -72.6 L10.6 -77.6 M0 -72.6 L-10.6 -77.6 M0 -79.1 L10.6 -84.1 M0 -79.1 L-10.6 -84.1 " stroke="#1c6a2b" stroke-width=".7" opacity=".45" fill="none"/>
+    <path d="M0 -33.1 L0 -89" stroke="#b9dc8f" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M13.0 -49.8 L5.4 -53.8 M-13.0 -60.4 L-5.4 -64.4 M13.0 -68.6 L5.4 -72.6 M-13.0 -78.0 L-5.4 -82.0 " stroke="#ffffff" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="120" cy="104" rx="9" ry="5" fill="#3d7d3a" stroke="#1c6a2b" stroke-width=".8"/>
+
+  <!-- nom de l'établissement -->
+  <g font-family="'Arial Black', 'Segoe UI Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" fill="#b3322a" text-anchor="middle">
+    <text x="120" y="127" font-size="10" letter-spacing="1.5">COLLEGE</text>
+    <text x="120" y="139" font-size="10.5" letter-spacing=".4">FIANARAN-TSOA</text>
+    <text x="120" y="151" font-size="10.5" letter-spacing=".1">AMBOHIMIANDRA</text>
+  </g>
+
+  <!-- petite maison (l'école, le foyer), centrée sur l'axe du logo -->
+  <g stroke-linejoin="round">
+    <rect x="128" y="158" width="4.5" height="10" fill="#b3322a"/>
+    <rect x="104" y="171" width="32" height="21" rx="1" fill="#1b1b1b"/>
+    <path d="M98.5 173.5 L120 156 L141.5 173.5 Z" fill="#b3322a" stroke="#b3322a" stroke-width="2"/>
+    <rect x="107.5" y="175.5" width="6.5" height="6.5" rx=".8" fill="#ffffff"/>
+    <rect x="126" y="175.5" width="6.5" height="6.5" rx=".8" fill="#ffffff"/>
+    <path d="M115.5 192 L115.5 182 A4.5 4.5 0 0 1 124.5 182 L124.5 192 Z" fill="#ffffff"/>
+  </g>
+
+  <!-- devise -->
+  <text font-family="'Arial Black', 'Segoe UI Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="11" fill="#1b1b1b" letter-spacing=".7">
+    <textPath href="#arc-devise" startOffset="50%" text-anchor="middle">MITSINJO NY HO AVY SOA</textPath>
+  </text>
+</svg>

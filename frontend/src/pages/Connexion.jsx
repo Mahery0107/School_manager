@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { api, lireErreur, session } from '../api'
+import BoutonTheme from '../components/BoutonTheme'
 import { Alerte, Champ } from '../components/ui'
 
 /** Écran de connexion du compte administrateur. */
-export default function Connexion({ ecole, onConnecte, message }) {
+export default function Connexion({ ecole, onConnecte, message, theme, onBasculerTheme }) {
   const [form, setForm] = useState({ identifiant: '', password: '' })
   const [erreur, setErreur] = useState(message || '')
   const [envoi, setEnvoi] = useState(false)
@@ -31,9 +32,10 @@ export default function Connexion({ ecole, onConnecte, message }) {
 
   return (
     <div className="connexion">
+      <BoutonTheme theme={theme} onBasculer={onBasculerTheme} className="btn-theme btn-theme-coin" />
       <form className="connexion-carte" onSubmit={connecter}>
         <div className="connexion-entete">
-          <img className="logo-image" src="/logo.svg" alt="Logo de l'école" />
+          <img className="logo-image" src="/logo.svg?v=3" alt="Logo de l'école" />
           <div>
             <h1>{ecole || 'Gestion École'}</h1>
             <p className="muted">Scolarité & caisse — accès administrateur</p>

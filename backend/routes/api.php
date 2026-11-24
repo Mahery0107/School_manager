@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClasseController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EtudiantController;
+use App\Http\Controllers\Api\FournitureController;
+use App\Http\Controllers\Api\FraisController;
 use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\SauvegardeController;
@@ -30,6 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('classes', ClasseController::class)
         ->except('show')
         ->parameters(['classes' => 'classe']);
+    Route::apiResource('frais', FraisController::class)
+        ->except('show')
+        ->parameters(['frais' => 'frais']);
 
     // Étudiants
     Route::get('/etudiants', [EtudiantController::class, 'index']);
@@ -51,6 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/recus/{numero}', [PaiementController::class, 'recu']);
     Route::get('/recus/{numero}/pdf', [PaiementController::class, 'pdf']);
     Route::post('/recus/{numero}/annuler', [PaiementController::class, 'annuler']);
+
+    // Fournitures scolaires par année et par classe
+    Route::get('/fournitures/pdf', [FournitureController::class, 'pdf']);
+    Route::post('/fournitures/copier', [FournitureController::class, 'copier']);
+    Route::post('/fournitures/ordre', [FournitureController::class, 'ordonner']);
+    Route::apiResource('fournitures', FournitureController::class)->except('show');
 
     // Sauvegardes de la base
     Route::get('/sauvegardes', [SauvegardeController::class, 'index']);

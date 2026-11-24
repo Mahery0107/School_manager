@@ -162,7 +162,7 @@ export default function Eleves() {
                           {i.date_sortie.split('-').reverse().join('/')}
                         </small>
                       )}
-                      {!i.droit_paye && <small className="danger bloc">Droit d'inscription non payé</small>}
+                      {!i.droit_paye && <small className="danger bloc">Frais de l'année non réglés</small>}
                     </td>
                     <td>{i.classe.nom}</td>
                     <td>

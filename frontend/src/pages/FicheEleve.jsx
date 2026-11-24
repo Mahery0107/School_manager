@@ -189,7 +189,7 @@ export default function FicheEleve() {
                     <tr key={p.id}>
                       <td>{dateFr(p.date_paiement)}</td>
                       <td className="mono">{p.numero_recu}</td>
-                      <td>{p.type === 'droit' ? "Droit d'inscription" : `Écolage ${nomMois(p.mois)}`}</td>
+                      <td>{p.type === 'frais' ? p.frais?.libelle : p.type === 'droit' ? "Droit d'inscription" : `Écolage ${nomMois(p.mois)}`}</td>
                       <td>{MODES[p.mode]}</td>
                       <td className="num">{ar(p.montant)}</td>
                     </tr>

@@ -59,8 +59,9 @@ class PaiementController extends Controller
     }
 
     /**
-     * Enregistre un paiement : droit d'inscription et/ou un ou plusieurs mois d'écolage.
-     * Chaque élément peut être payé en plusieurs fois : montants = {"droit": 100000, "2026-11": 10000}.
+     * Enregistre un paiement : frais annuels (assurance, FRAM, t-shirt…) et/ou mois d'écolage.
+     *   frais = [id, …] ; mois = ["2026-11", …] ; droit = true pour l'ancien droit d'inscription (reste éventuel).
+     * Chaque élément peut être payé en plusieurs fois : montants = {"frais-2": 30000, "2026-11": 10000, "droit": …}.
      * Sans montant indiqué, l'élément est soldé (son reste à payer est encaissé).
      * Le montant d'un versement ne peut pas dépasser le reste à payer de l'élément.
      */
@@ -69,6 +70,8 @@ class PaiementController extends Controller
         $data = $request->validate([
             'inscription_id' => 'required|exists:inscriptions,id',
             'droit' => 'boolean',
+            'frais' => 'array',
+            'frais.*' => 'integer',
             'mois' => 'array',
             'mois.*' => 'string|date_format:Y-m',
             'montants' => 'array',
@@ -82,26 +85,41 @@ class PaiementController extends Controller
             'montants.*.integer' => "Le montant versé doit être un nombre entier d'Ariary.",
         ]);
 
-        $payerDroit = (bool) ($data['droit'] ?? false);
+        $cles = array_merge(
+            ($data['droit'] ?? false) ? ['droit'] : [],
+            array_map(fn ($id) => 'frais-'.$id, array_values(array_unique($data['frais'] ?? []))),
+        );
         $mois = array_values(array_unique($data['mois'] ?? []));
         sort($mois);
         $montants = $data['montants'] ?? [];
 
-        if (! $payerDroit && empty($mois)) {
+        if (! $cles && ! $mois) {
             throw ValidationException::withMessages([
-                'mois' => "Sélectionnez le droit d'inscription et/ou au moins un mois d'écolage.",
+                'mois' => "Sélectionnez au moins un frais ou un mois d'écolage.",
             ]);
         }
 
-        $numero = DB::transaction(function () use ($request, $data, $payerDroit, $mois, $montants) {
-            $inscription = Inscription::with(['classe', 'anneeScolaire'])
+        $numero = DB::transaction(function () use ($request, $data, $cles, $mois, $montants) {
+            $inscription = Inscription::with(['classe', 'anneeScolaire', 'etudiant'])
                 ->lockForUpdate()->findOrFail($data['inscription_id']);
             $inscription->load('paiements'); // versements à jour, lus sous verrou
 
+            // [type, mois, frais_id, clé, libellé, état]
             $elements = [];
-            if ($payerDroit) {
-                $elements[] = ['type' => 'droit', 'mois' => null, 'cle' => 'droit', 'libelle' => "le droit d'inscription"];
+            $frais = collect($inscription->elementsFrais())->keyBy('cle');
+            foreach ($cles as $cle) {
+                $f = $frais->get($cle);
+                if (! $f) {
+                    throw ValidationException::withMessages(['frais' => 'Ce frais ne concerne pas cet élève.']);
+                }
+                if (! $f['payable']) {
+                    throw ValidationException::withMessages(['frais' => $f['solde'] && $f['montant_paye'] > 0
+                        ? "« {$f['libelle']} » est déjà entièrement payé."
+                        : "« {$f['libelle']} » n'est pas à payer pour cet élève : {$f['note']}."]);
+                }
+                $elements[] = [$f['type'], null, $f['frais_id'], $cle, "« {$f['libelle']} »", $f];
             }
+
             $moisValides = $inscription->moisDus();
             foreach ($mois as $m) {
                 if (! in_array($m, $moisValides, true)) {
@@ -109,7 +127,11 @@ class PaiementController extends Controller
                         ? "L'écolage du mois {$m} n'est pas dû : l'élève a quitté l'école le {$inscription->date_sortie->format('d/m/Y')}."
                         : "Le mois {$m} ne fait pas partie de l'année scolaire."]);
                 }
-                $elements[] = ['type' => 'ecolage', 'mois' => $m, 'cle' => $m, 'libelle' => "l'écolage du mois {$m}"];
+                $etat = $inscription->etatElement('ecolage', $m);
+                if ($etat['solde']) {
+                    throw ValidationException::withMessages(['mois' => "L'écolage du mois {$m} est déjà entièrement payé."]);
+                }
+                $elements[] = ['ecolage', $m, null, $m, "l'écolage du mois {$m}", $etat];
             }
 
             $numero = Paiement::genererNumeroRecu();
@@ -121,27 +143,21 @@ class PaiementController extends Controller
                 'encaisse_par' => $request->user()?->name,
             ];
 
-            foreach ($elements as $e) {
-                $etat = $inscription->etatElement($e['type'], $e['mois']);
-                $champ = $e['type'] === 'droit' ? 'droit' : 'mois';
-
-                if ($etat['solde']) {
-                    throw ValidationException::withMessages([$champ => ucfirst($e['libelle']).' est déjà entièrement payé.']);
-                }
-
-                $montant = (int) ($montants[$e['cle']] ?? $etat['reste']);
+            foreach ($elements as [$type, $m, $fraisId, $cle, $libelle, $etat]) {
+                $montant = (int) ($montants[$cle] ?? $etat['reste']);
                 if ($montant > $etat['reste']) {
                     throw ValidationException::withMessages([
-                        "montants.{$e['cle']}" => sprintf(
+                        "montants.{$cle}" => sprintf(
                             'Le montant versé pour %s (%s Ar) dépasse le reste à payer (%s Ar).',
-                            $e['libelle'], number_format($montant, 0, ',', ' '), number_format($etat['reste'], 0, ',', ' ')
+                            $libelle, number_format($montant, 0, ',', ' '), number_format($etat['reste'], 0, ',', ' ')
                         ),
                     ]);
                 }
 
                 $inscription->paiements()->create($commun + [
-                    'type' => $e['type'],
-                    'mois' => $e['mois'],
+                    'type' => $type,
+                    'mois' => $m,
+                    'frais_id' => $fraisId,
                     'montant' => $montant,
                     'montant_du' => $etat['montant_du'],
                 ]);
@@ -202,7 +218,9 @@ class PaiementController extends Controller
 
     private function construireRecu(string $numero): array
     {
-        $lignes = Paiement::where('numero_recu', $numero)->orderBy('type')->orderBy('mois')->get();
+        // frais d'abord (dans l'ordre de la grille), puis les mois d'écolage
+        $lignes = Paiement::with('frais')->where('numero_recu', $numero)->get()
+            ->sortBy(fn (Paiement $l) => [$l->type === 'ecolage' ? 1 : 0, $l->frais?->ordre ?? 0, (string) $l->mois])->values();
         abort_if($lignes->isEmpty(), 404, 'Reçu introuvable.');
 
         $premiere = $lignes->first();
@@ -226,12 +244,15 @@ class PaiementController extends Controller
             'lignes' => $lignes->map(function (Paiement $l) use ($inscription) {
                 // versements actifs antérieurs sur le même élément (hors reçus annulés)
                 $deja = (int) $inscription->paiements
-                    ->filter(fn (Paiement $p) => $p->type === $l->type && $p->mois === $l->mois && $p->id < $l->id)
+                    ->filter(fn (Paiement $p) => $p->type === $l->type && $p->mois === $l->mois
+                        && $p->frais_id === $l->frais_id && $p->id < $l->id)
                     ->sum('montant');
 
                 return [
                     'type' => $l->type,
                     'mois' => $l->mois,
+                    'frais_id' => $l->frais_id,
+                    'designation' => $l->designation(),
                     'montant' => $l->montant,
                     'montant_du' => $l->montant_du,
                     'deja_paye' => $deja,

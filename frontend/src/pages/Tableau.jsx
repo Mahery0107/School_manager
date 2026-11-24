@@ -49,7 +49,7 @@ export default function Tableau() {
           <span className="raccourci-icone">Ar</span>
           <span>
             <strong>Encaisser</strong>
-            <small>Droit d'inscription / écolage</small>
+            <small>Frais de l'année / écolage</small>
           </span>
         </Link>
       </div>
@@ -77,7 +77,7 @@ export default function Tableau() {
           <span className="stat-label">Élèves en retard</span>
           <span className="stat-valeur">{d.eleves_en_retard}</span>
           <span className="muted">
-            {ar(d.montant_ecolage_en_retard)} d'écolage non payé après le {d.jour_limite_ecolage} du mois, ou droit impayé
+            {ar(d.montant_ecolage_en_retard)} d'écolage non payé après le {d.jour_limite_ecolage} du mois, ou frais de l'année non réglés
           </span>
         </div>
         <div className="stat">

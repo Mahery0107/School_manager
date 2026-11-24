@@ -1,4 +1,4 @@
-import { ar, dateFr, MODES, nomComplet, nomMois } from '../api'
+import { ar, dateFr, MODES, nomComplet } from '../api'
 
 /** Reçu de paiement imprimable. */
 export default function Recu({ recu }) {
@@ -7,7 +7,7 @@ export default function Recu({ recu }) {
     <div className="recu">
       <div className="recu-entete">
         <div className="recu-identite">
-          <img className="recu-logo" src="/logo.svg" alt="Logo de l'école" />
+          <img className="recu-logo" src="/logo.svg?v=3" alt="Logo de l'école" />
           <div>
             <div className="recu-ecole">{recu.ecole}</div>
             <div className="muted">Reçu de paiement — Année {recu.annee_scolaire}</div>
@@ -57,7 +57,7 @@ export default function Recu({ recu }) {
           {recu.lignes.map((l, i) => (
             <tr key={i}>
               <td>
-                {l.type === 'droit' ? "Droit d'inscription" : `Écolage — ${nomMois(l.mois)}`}
+                {l.designation}
                 {l.reste_apres > 0 ? (
                   <small className="bloc muted">
                     Versement partiel sur {ar(l.montant_du)}

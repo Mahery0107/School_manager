@@ -2,10 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { api, lireErreur } from '../api'
 
 /**
- * Affiche le reçu PDF généré par Laravel dans une fenêtre d'aperçu,
- * puis permet de l'imprimer (ou de le télécharger).
+ * Affiche un PDF généré par Laravel dans une fenêtre d'aperçu, puis permet de l'imprimer (ou de le télécharger).
+ * - reçu : numero="REC-…"
+ * - autre document : chemin="/fournitures/pdf", params={…}, titre="…", fichier="….pdf"
  */
-export default function ApercuPdf({ numero, onFermer }) {
+export default function ApercuPdf({ numero, chemin, params, titre, fichier, onFermer }) {
+  const source = chemin || `/recus/${numero}/pdf`
+  const cleParams = JSON.stringify(params || {})
+  const nomFichier = fichier || `recu-${numero}.pdf`
+  const titreAffiche = titre || (
+    <>
+      Reçu <span className="mono">{numero}</span>
+    </>
+  )
   const [url, setUrl] = useState(null)
   const [erreur, setErreur] = useState('')
   const cadre = useRef(null)
@@ -14,7 +23,7 @@ export default function ApercuPdf({ numero, onFermer }) {
     let lien = null
     let actif = true
     api
-      .get(`/recus/${numero}/pdf`, { responseType: 'blob' })
+      .get(source, { params: JSON.parse(cleParams), responseType: 'blob' })
       .then((r) => {
         lien = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }))
         if (actif) setUrl(lien)
@@ -24,7 +33,7 @@ export default function ApercuPdf({ numero, onFermer }) {
       actif = false
       if (lien) URL.revokeObjectURL(lien)
     }
-  }, [numero])
+  }, [source, cleParams])
 
   // Fermeture avec la touche Échap
   useEffect(() => {
@@ -45,17 +54,15 @@ export default function ApercuPdf({ numero, onFermer }) {
 
   return (
     <div className="modale-fond" onClick={onFermer}>
-      <div className="modale modale-pdf" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Aperçu du reçu PDF">
+      <div className="modale modale-pdf" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Aperçu PDF">
         <div className="modale-pdf-entete">
-          <strong>
-            Reçu <span className="mono">{numero}</span>
-          </strong>
+          <strong>{titreAffiche}</strong>
           <div className="page-actions">
             <button className="btn btn-ghost" onClick={onFermer}>
               Fermer
             </button>
             {url && (
-              <a className="btn" href={url} download={`recu-${numero}.pdf`}>
+              <a className="btn" href={url} download={nomFichier}>
                 Télécharger
               </a>
             )}
@@ -67,7 +74,7 @@ export default function ApercuPdf({ numero, onFermer }) {
         <div className="modale-pdf-corps">
           {erreur && <p className="danger">{erreur}</p>}
           {!url && !erreur && <p className="muted">Génération du PDF…</p>}
-          {url && <iframe ref={cadre} src={url} title={`Reçu ${numero}`} />}
+          {url && <iframe ref={cadre} src={url} title={typeof titre === 'string' ? titre : `Reçu ${numero}`} />}
         </div>
       </div>
     </div>

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { api, session } from './api'
+import BoutonTheme from './components/BoutonTheme'
+import Icone from './components/Icone'
+import { useTheme } from './theme'
 import Connexion from './pages/Connexion'
 import Eleves from './pages/Eleves'
 import FicheEleve from './pages/FicheEleve'
+import Fournitures from './pages/Fournitures'
 import Inscription from './pages/Inscription'
 import Journal from './pages/Journal'
 import Paiement from './pages/Paiement'
@@ -12,19 +16,20 @@ import Reinscription from './pages/Reinscription'
 import Tableau from './pages/Tableau'
 
 const MENU = [
-  { to: '/', label: 'Tableau de bord', fin: true },
+  { to: '/', label: 'Tableau de bord', icone: 'tableau', fin: true },
   { titre: 'Scolarité' },
-  { to: '/inscription', label: 'Nouvelle inscription' },
-  { to: '/reinscription', label: 'Réinscription' },
-  { to: '/eleves', label: 'Élèves inscrits' },
+  { to: '/inscription', label: 'Nouvelle inscription', icone: 'inscription' },
+  { to: '/reinscription', label: 'Réinscription', icone: 'reinscription' },
+  { to: '/eleves', label: 'Élèves inscrits', icone: 'eleves' },
+  { to: '/fournitures', label: 'Fournitures scolaires', icone: 'fournitures' },
   { titre: 'Caisse' },
-  { to: '/paiements/nouveau', label: 'Encaisser un paiement' },
-  { to: '/paiements', label: 'Journal des paiements', fin: true },
+  { to: '/paiements/nouveau', label: 'Encaisser un paiement', icone: 'encaisser' },
+  { to: '/paiements', label: 'Journal des paiements', icone: 'journal', fin: true },
   { titre: 'Administration' },
-  { to: '/parametres', label: 'Paramètres' },
+  { to: '/parametres', label: 'Paramètres', icone: 'parametres' },
 ]
 
-function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
+function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion, theme, onBasculerTheme }) {
   const [menuOuvert, setMenuOuvert] = useState(false)
   const location = useLocation()
   useEffect(() => setMenuOuvert(false), [location.pathname])
@@ -33,7 +38,7 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
     <div className="app">
       <aside className={`sidebar ${menuOuvert ? 'ouverte' : ''}`}>
         <div className="logo">
-          <img className="logo-image" src="/logo.svg" alt="Logo de l'école" />
+          <img className="logo-image" src="/logo.svg?v=3" alt="Logo de l'école" />
           <span>
             {ecole || 'Gestion École'}
             <small>Scolarité & caisse</small>
@@ -47,7 +52,8 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
               </div>
             ) : (
               <NavLink key={m.to} to={m.to} end={m.fin} className="nav-lien">
-                {m.label}
+                <Icone nom={m.icone} />
+                <span>{m.label}</span>
               </NavLink>
             ),
           )}
@@ -58,9 +64,12 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
             {utilisateur.name}
             <small>{utilisateur.identifiant}</small>
           </span>
-          <button className="btn-deconnexion" onClick={onDeconnexion} title="Se déconnecter">
-            Déconnexion
-          </button>
+          <div className="compte-actions">
+            <BoutonTheme theme={theme} onBasculer={onBasculerTheme} />
+            <button className="btn-deconnexion" onClick={onDeconnexion} title="Se déconnecter">
+              Déconnexion
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -70,6 +79,7 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
             ☰
           </button>
           <strong>{ecole || 'Gestion École'}</strong>
+          <BoutonTheme theme={theme} onBasculer={onBasculerTheme} className="btn-theme btn-theme-icone" />
         </div>
         <main className="contenu">
           <Routes>
@@ -78,6 +88,7 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
             <Route path="/reinscription" element={<Reinscription />} />
             <Route path="/eleves" element={<Eleves />} />
             <Route path="/eleves/:id" element={<FicheEleve />} />
+            <Route path="/fournitures" element={<Fournitures />} />
             <Route path="/paiements/nouveau" element={<Paiement />} />
             <Route path="/paiements" element={<Journal />} />
             <Route
@@ -94,6 +105,7 @@ function Layout({ ecole, utilisateur, setUtilisateur, onDeconnexion }) {
 }
 
 export default function App() {
+  const [theme, basculerTheme] = useTheme()
   // Nom de l'établissement, défini côté Laravel (APP_ECOLE dans backend/.env)
   const [ecole, setEcole] = useState('')
   useEffect(() => {
@@ -143,6 +155,8 @@ export default function App() {
   if (!utilisateur)
     return (
       <Connexion
+        theme={theme}
+        onBasculerTheme={basculerTheme}
         ecole={ecole}
         message={messageConnexion}
         onConnecte={(u) => {
@@ -154,7 +168,10 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Layout ecole={ecole} utilisateur={utilisateur} setUtilisateur={setUtilisateur} onDeconnexion={deconnecter} />
+      <Layout ecole={ecole} utilisateur={utilisateur} setUtilisateur={setUtilisateur} onDeconnexion={deconnecter}
+        theme={theme}
+        onBasculerTheme={basculerTheme}
+      />
     </BrowserRouter>
   )
 }

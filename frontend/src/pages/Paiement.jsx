@@ -11,9 +11,9 @@ export default function Paiement() {
   const [params, setParams] = useSearchParams()
   const inscriptionId = params.get('inscription')
   const [inscription, setInscription] = useState(null)
-  const [droit, setDroit] = useState(false)
+  const [fraisChoisis, setFraisChoisis] = useState([]) // clés des frais sélectionnés (frais-ID, droit)
   const [mois, setMois] = useState([])
-  // montant saisi par élément (clé 'droit' ou 'YYYY-MM') ; vide = tout le reste à payer
+  // montant saisi par élément (clé 'frais-ID', 'droit' ou 'YYYY-MM') ; vide = tout le reste à payer
   const [montants, setMontants] = useState({})
   const [mode, setMode] = useState('especes')
   const [reference, setReference] = useState('')
@@ -32,7 +32,7 @@ export default function Paiement() {
       .catch((e) => setMessage(lireErreur(e).message))
 
   useEffect(() => {
-    setDroit(false)
+    setFraisChoisis([])
     setMois([])
     setMontants({})
     setErreurs({})
@@ -44,7 +44,7 @@ export default function Paiement() {
   // Éléments sélectionnés, avec leur reste à payer (paiement possible en plusieurs fois)
   const elements = s
     ? [
-        ...(droit ? [{ cle: 'droit', libelle: "Droit d'inscription", ...s.droit }] : []),
+        ...s.frais.filter((f) => fraisChoisis.includes(f.cle)),
         ...mois.map((m) => ({ cle: m, libelle: `Écolage ${nomMois(m)}`, ...s.mois.find((x) => x.mois === m) })),
       ]
     : []
@@ -59,7 +59,7 @@ export default function Paiement() {
   const saisieInvalide = elements.some((e) => erreurMontant(e))
   const viderSelection = () => {
     setMois([])
-    setDroit(false)
+    setFraisChoisis([])
     setMontants({})
   }
 
@@ -76,7 +76,8 @@ export default function Paiement() {
     try {
       const { data } = await api.post('/paiements', {
         inscription_id: inscription.id,
-        droit,
+        droit: fraisChoisis.includes('droit'),
+        frais: fraisChoisis.filter((c) => c.startsWith('frais-')).map((c) => Number(c.slice(6))),
         mois,
         montants: Object.fromEntries(elements.map((e) => [e.cle, montantDe(e)])),
         mode,
@@ -98,7 +99,7 @@ export default function Paiement() {
 
   return (
     <>
-      <EnTete titre="Encaisser un paiement" sousTitre="Droit d'inscription et écolages mensuels." />
+      <EnTete titre="Encaisser un paiement" sousTitre="Frais de l'année (assurance, FRAM, t-shirt…) et écolages mensuels." />
       <Alerte onFermer={() => setMessage('')}>{message}</Alerte>
 
       {!inscription && (
@@ -134,8 +135,8 @@ export default function Paiement() {
               situation={s}
               selection={mois}
               onBasculer={basculer}
-              droitSelectionne={droit}
-              onBasculerDroit={() => setDroit(!droit)}
+              fraisSelection={fraisChoisis}
+              onBasculerFrais={(cle) => setFraisChoisis((l) => (l.includes(cle) ? l.filter((x) => x !== cle) : [...l, cle]))}
             />
             <div className="raccourcis">
               <span className="muted">Raccourcis :</span>
@@ -148,7 +149,16 @@ export default function Paiement() {
               <button type="button" className="btn btn-petit" onClick={() => prochainsMois(100)}>
                 Tout le reste
               </button>
-              {(mois.length > 0 || droit) && (
+              {s.frais.some((f) => f.payable && f.obligatoire) && (
+                <button
+                  type="button"
+                  className="btn btn-petit"
+                  onClick={() => setFraisChoisis(s.frais.filter((f) => f.payable && f.obligatoire).map((f) => f.cle))}
+                >
+                  Frais obligatoires
+                </button>
+              )}
+              {(mois.length > 0 || fraisChoisis.length > 0) && (
                 <button
                   type="button"
                   className="btn btn-petit btn-ghost"
@@ -158,7 +168,9 @@ export default function Paiement() {
                 </button>
               )}
             </div>
-            {(erreurs.mois || erreurs.droit) && <p className="champ-erreur">{erreurs.mois || erreurs.droit}</p>}
+            {(erreurs.mois || erreurs.frais || erreurs.droit) && (
+              <p className="champ-erreur">{erreurs.mois || erreurs.frais || erreurs.droit}</p>
+            )}
           </div>
 
           <form className="carte caisse" onSubmit={soumettre}>

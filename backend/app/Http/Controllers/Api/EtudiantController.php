@@ -29,7 +29,7 @@ class EtudiantController extends Controller
     {
         $etudiant->load([
             'inscriptions' => fn ($q) => $q->orderByDesc('annee_scolaire_id'),
-            'inscriptions.classe', 'inscriptions.anneeScolaire', 'inscriptions.paiements',
+            'inscriptions.classe', 'inscriptions.anneeScolaire', 'inscriptions.paiements.frais',
         ]);
 
         $etudiant->inscriptions->each(fn ($i) => $i->setAttribute('situation', $i->situation()));

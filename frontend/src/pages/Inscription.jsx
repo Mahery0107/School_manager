@@ -14,6 +14,11 @@ export default function Inscription() {
   const [message, setMessage] = useState('')
   const [envoi, setEnvoi] = useState(false)
   const [resultat, setResultat] = useState(null)
+  const [grilleFrais, setGrilleFrais] = useState([])
+
+  useEffect(() => {
+    api.get('/frais').then((r) => setGrilleFrais(r.data)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (anneeActive && !form.annee_scolaire_id) setForm((f) => ({ ...f, annee_scolaire_id: anneeActive.id }))
@@ -21,6 +26,15 @@ export default function Inscription() {
 
   const maj = (champ) => (e) => setForm({ ...form, [champ]: e.target.value })
   const classe = classes.find((c) => String(c.id) === String(form.classe_id))
+  // frais obligatoires pour un nouvel élève de cette classe (la cotisation FRAM est due une fois par famille)
+  const fraisClasse = classe
+    ? grilleFrais.filter(
+        (f) =>
+          f.actif &&
+          ['tous', 'nouveaux'].includes(f.obligatoire) &&
+          (f.classe_ids.length === 0 || f.classe_ids.includes(classe.id)),
+      )
+    : []
 
   const soumettre = async (e) => {
     e.preventDefault()
@@ -56,7 +70,7 @@ export default function Inscription() {
           </p>
           <div className="actions-centre">
             <Link className="btn btn-primaire" to={`/paiements/nouveau?inscription=${resultat.id}`}>
-              Encaisser le droit d'inscription
+              Encaisser les frais d'inscription
             </Link>
             <button className="btn btn-ghost" onClick={() => setResultat(null)}>
               Nouvelle inscription
@@ -100,10 +114,24 @@ export default function Inscription() {
             </Champ>
           </div>
           {classe && (
-            <p className="tarifs">
-              Droit d'inscription : <strong>{ar(classe.droit_inscription)}</strong> · Écolage mensuel :{' '}
-              <strong>{ar(classe.ecolage_mensuel)}</strong>
-            </p>
+            <div className="tarifs">
+              <div>
+                Écolage mensuel : <strong>{ar(classe.ecolage_mensuel)}</strong>
+              </div>
+              {fraisClasse.length > 0 && (
+                <div>
+                  Frais de l'année :{' '}
+                  {fraisClasse.map((f, i) => (
+                    <span key={f.id}>
+                      {i > 0 && ' · '}
+                      {f.libelle} <strong>{ar(f.montant)}</strong>
+                      {f.portee === 'famille' && ' (1 fois par famille)'}
+                    </span>
+                  ))}{' '}
+                  — total <strong>{ar(fraisClasse.reduce((t, f) => t + f.montant, 0))}</strong>
+                </div>
+              )}
+            </div>
           )}
         </fieldset>
 

@@ -4,7 +4,7 @@ Application de gestion scolaire :
 
 - **inscription** des nouveaux élèves ;
 - **réinscription** des anciens élèves ;
-- **paiement** du droit d'inscription et des écolages mensuels ;
+- **paiement** des frais de l'année (assurance, cotisation FRAM, t-shirt…) et des écolages mensuels ;
 - **reçu PDF** affiché à l'écran puis imprimé.
 
 | Dossier | Contenu |
@@ -88,9 +88,10 @@ Vite redirige automatiquement vers Laravel les appels faits à `/api`.
 | **Fiche élève** | Identité, parents (père et mère), historique des inscriptions, situation financière, modification, **retrait de l'école** (renvoyé, parti) et réintégration |
 | **Inscription** | Nouvel élève : le matricule est attribué automatiquement, puis l'élève est inscrit pour l'année choisie |
 | **Réinscription** | Ancien élève : la classe supérieure est proposée. La 3ème est la classe finale |
-| **Paiement** | Droit d'inscription et/ou plusieurs mois d'écolage en un seul reçu |
+| **Paiement** | Frais de l'année et/ou plusieurs mois d'écolage en un seul reçu |
+| **Fournitures scolaires** | Liste des fournitures par classe et par année, imprimable en PDF (une classe ou toutes les classes, une page par classe) |
 | **Journal** | Liste des reçus, avec réimpression et **annulation** (reçus annulés barrés) |
-| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs, **compte administrateur** (nom, identifiant, mot de passe), **sauvegardes** (liste, sauvegarde immédiate, téléchargement) |
+| **Paramètres** | Années scolaires (dont l'année active), classes et tarifs, **compte administrateur** (nom, identifiant, mot de passe), **sauvegardes** (liste, sauvegarde immédiate, téléchargement), **fournitures scolaires** par année et par classe (ajout, modification, ordre, copie de la liste de l'an dernier) |
 
 **Bouton « Imprimer »** : le reçu s'ouvre d'abord en **PDF** dans une fenêtre d'aperçu. Vous pouvez ensuite l'**imprimer** ou le **télécharger**.
 
@@ -106,20 +107,35 @@ Vite redirige automatiquement vers Laravel les appels faits à `/api`.
 
 ### Tarifs
 
-| Classes | Droit d'inscription | Écolage mensuel |
-|---|---|---|
-| MPS, MMS, MGS (maternelle) | 220 000 Ar | 23 000 Ar |
-| CP1, CP2, CE, CM1, CM2 | 220 000 Ar | 23 000 Ar |
-| 6ème, 5ème, 4ème, 3ème | 220 000 Ar | 25 000 Ar |
+**Écolage mensuel** (par élève) :
 
-Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le montant payé à l'époque. Les mois non encore payés suivent le nouveau tarif.
+| Classes | Écolage / mois |
+|---|---|
+| MPS, MMS, MGS, CP1, CP2, CE, CM1, CM2 | 25 000 Ar |
+| 6ème, 5ème | 28 000 Ar |
+| 4ème, 3ème | 30 000 Ar |
+
+**Frais de l'année** (en plus de l'écolage) :
+
+| Frais | Montant | Dû par |
+|---|---|---|
+| Droit d'entrée | 5 000 Ar | Nouveaux élèves du préscolaire (MPS, MMS, MGS, CP1) |
+| Frais généraux - Assurance | 60 000 Ar | Chaque élève |
+| Cotisation FRAM & S.E | 30 000 Ar | **Une fois par famille**, même avec plusieurs enfants |
+| T-shirt + cravate | 15 000 Ar | Nouveaux élèves ; facultatif pour les autres (à la demande, pour changer) |
+| Examen blanc | 3 000 Ar | Élèves de CM2 et de 3ème |
+
+- Les tarifs et les frais se modifient dans **Paramètres**. On peut y ajouter, modifier, désactiver ou supprimer un frais. Pour chaque frais, on choisit les classes concernées, si les nouveaux élèves seuls le doivent, s'il est payé par élève ou par famille, et s'il est facultatif pour les autres.
+- **Famille** : deux élèves sont frères et sœurs si le **téléphone du père ou de la mère** est le même (espaces ignorés). La cotisation FRAM est due sur le premier enfant inscrit. Sur la fiche des frères et sœurs, elle apparaît « à payer avec … » puis « réglée par la famille ».
+- **Ancien droit d'inscription** : un élève qui a déjà payé l'ancien droit (220 000 Ar) pour l'année ne doit pas les nouveaux frais de cette année. Seul le t-shirt reste proposé, en facultatif.
+- Un élément déjà payé ou commencé garde son montant. Les éléments pas encore payés suivent les nouveaux tarifs.
 
 ### Année scolaire et écolage
 
 - L'année scolaire va de **septembre à juin**, soit 10 mois d'écolage.
 - L'écolage d'un mois se paie **au plus tard le 10** de ce mois. Passé cette date, le mois est marqué **En retard**.
-- Le droit d'inscription est dû **une fois par année**.
-- **Paiement en plusieurs fois** : le droit et chaque mois peuvent être réglés petit à petit, par versements successifs, jusqu'au montant exact. Un élément entamé est marqué **Partiel** avec son reste à payer. Un mois partiellement payé après le 10 reste **En retard**.
+- Les frais de l'année sont dus **une fois par année scolaire**.
+- **Paiement en plusieurs fois** : chaque frais et chaque mois peuvent être réglés petit à petit, par versements successifs, jusqu'au montant exact. Un élément entamé est marqué **Partiel** avec son reste à payer. Un mois partiellement payé après le 10 reste **En retard**.
 - Un versement ne peut jamais dépasser le reste à payer de l'élément. Une fois soldé, l'élément n'accepte plus de paiement.
 - Le montant dû d'un élément est figé au premier versement : un changement de tarif ne touche que les éléments pas encore entamés.
 
@@ -149,7 +165,7 @@ Les tarifs se modifient dans **Paramètres**. Un mois déjà payé garde le mont
 - Les numéros de reçu sont **garantis uniques**, même si deux postes encaissent à la même seconde : un compteur par jour est verrouillé pendant l'encaissement.
 - Chaque reçu indique **qui a encaissé**. Les dates et les heures sont celles de Madagascar (`APP_TIMEZONE`, UTC+3 par défaut).
 - Sur le reçu, chaque versement partiel indique ce qui a déjà été versé et le reste à payer.
-- Les reçus suivent le format `REC-AAAAMMJJ-0001`. Un même reçu peut regrouper le droit d'inscription et plusieurs mois.
+- Les reçus suivent le format `REC-AAAAMMJJ-0001`. Un même reçu peut regrouper plusieurs frais et plusieurs mois.
 - Modes de paiement : espèces, mobile money, chèque, virement. Une **référence** est obligatoire pour tout mode autre que les espèces.
 
 ---
@@ -193,7 +209,11 @@ Toutes les routes sauf `/api/etablissement` et `/api/login` exigent d'être conn
 | GET | `/api/dashboard` | Statistiques de l'année active |
 | GET, POST | `/api/annees-scolaires` | Liste et création des années scolaires |
 | POST | `/api/annees-scolaires/{id}/activer` | Définir l'année active |
-| GET, POST, PUT, DELETE | `/api/classes` | Classes et tarifs |
+| GET, POST, PUT, DELETE | `/api/classes` | Classes et écolage mensuel |
+| GET, POST, PUT, DELETE | `/api/fournitures?annee_scolaire_id=&classe_id=` | Fournitures scolaires d'une classe pour une année |
+| POST | `/api/fournitures/copier`, `/api/fournitures/ordre` | Copier une liste (autre classe / autre année), changer l'ordre |
+| GET | `/api/fournitures/pdf?annee_scolaire_id=&classe_id=` | Liste imprimable (A4) |
+| GET, POST, PUT, DELETE | `/api/frais` | Frais de l'année (montant, classes, nouveaux / tous, par élève / par famille, facultatif) |
 | GET | `/api/etudiants?q=` | Recherche d'élèves |
 | GET, PUT | `/api/etudiants/{id}` | Fiche avec historique, modification |
 | GET | `/api/inscriptions?annee_scolaire_id=&classe_id=&mois=AAAA-MM&statut=` | Inscrits avec le statut de l'écolage du mois (`paye`, `a_payer`, `en_retard`, `non_paye`) |

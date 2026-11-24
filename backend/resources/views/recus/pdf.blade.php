@@ -100,11 +100,7 @@
             @foreach ($recu['lignes'] as $ligne)
                 <tr>
                     <td>
-                        @if ($ligne['type'] === 'droit')
-                            Droit d'inscription
-                        @else
-                            Écolage — {{ ucfirst(\Carbon\Carbon::createFromFormat('Y-m-d', $ligne['mois'].'-01')->locale('fr')->translatedFormat('F Y')) }}
-                        @endif
+                        {{ $ligne['designation'] }}
                         @php($fmt = fn ($n) => number_format($n, 0, ',', ' ').' Ar')
                         @if ($ligne['reste_apres'] > 0)
                             <div class="detail">Versement partiel sur {{ $fmt($ligne['montant_du']) }}@if ($ligne['deja_paye'] > 0) (déjà versé : {{ $fmt($ligne['deja_paye']) }})@endif — <span class="reste-du">reste {{ $fmt($ligne['reste_apres']) }}</span></div>

@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             'libelle' => '2026-2027', 'date_debut' => '2026-09-01', 'date_fin' => '2027-06-30', 'active' => true,
         ]);
 
-        $this->call(ClasseSeeder::class);
+        $this->call([ClasseSeeder::class, FraisSeeder::class]);
         $classes = Classe::whereIn('nom', ['CM2', '6ème', '5ème'])->orderBy('ordre')->get()->values();
 
         // Anciens élèves inscrits l'an dernier (à réinscrire cette année)

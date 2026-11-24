@@ -11,22 +11,20 @@ use Illuminate\Database\Seeder;
  */
 class ClasseSeeder extends Seeder
 {
-    public const DROIT_INSCRIPTION = 220000;
-
     public const CLASSES = [
-        // nom => écolage mensuel (Ar)
-        'MPS' => 23000,
-        'MMS' => 23000,
-        'MGS' => 23000,
-        'CP1' => 23000,
-        'CP2' => 23000,
-        'CE' => 23000,
-        'CM1' => 23000,
-        'CM2' => 23000,
-        '6ème' => 25000,
-        '5ème' => 25000,
-        '4ème' => 25000,
-        '3ème' => 25000,
+        // nom => écolage mensuel (Ar) ; les autres frais annuels sont dans FraisSeeder
+        'MPS' => 25000,
+        'MMS' => 25000,
+        'MGS' => 25000,
+        'CP1' => 25000,
+        'CP2' => 25000,
+        'CE' => 25000,
+        'CM1' => 25000,
+        'CM2' => 25000,
+        '6ème' => 28000,
+        '5ème' => 28000,
+        '4ème' => 30000,
+        '3ème' => 30000,
     ];
 
     public function run(): void
@@ -35,7 +33,6 @@ class ClasseSeeder extends Seeder
         foreach (self::CLASSES as $nom => $ecolage) {
             Classe::updateOrCreate(['nom' => $nom], [
                 'ordre' => $ordre++,
-                'droit_inscription' => self::DROIT_INSCRIPTION,
                 'ecolage_mensuel' => $ecolage,
             ]);
         }

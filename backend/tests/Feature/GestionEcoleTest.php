@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AnneeScolaire;
 use App\Models\Classe;
 use App\Models\Etudiant;
+use App\Models\Frais;
 use App\Models\Inscription;
 use App\Models\Paiement;
 use App\Models\User;
@@ -27,6 +28,18 @@ class GestionEcoleTest extends TestCase
     private function anneeActive(): AnneeScolaire
     {
         return AnneeScolaire::active();
+    }
+
+    /** Id d'un frais de la grille, par libellé. */
+    private function frais(string $libelle): int
+    {
+        return Frais::where('libelle', $libelle)->value('id');
+    }
+
+    /** Frais obligatoires d'un nouvel élève de MPS (droit d'entrée, assurance, FRAM, t-shirt) = 110 000 Ar. */
+    private function fraisNouveauMps(): array
+    {
+        return array_map(fn ($l) => $this->frais($l), ["Droit d'entrée", 'Frais généraux - Assurance', 'Cotisation FRAM & S.E', 'T-shirt + cravate']);
     }
 
     private function nouvelEleve(): array
@@ -98,7 +111,7 @@ class GestionEcoleTest extends TestCase
         $this->travelTo('2026-11-10 16:00');   // le 10 : novembre n'est pas encore en retard
         $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->json('id');
         $this->postJson('/api/paiements', [
-            'inscription_id' => $id, 'droit' => true, 'mois' => ['2026-09'],
+            'inscription_id' => $id, 'frais' => $this->fraisNouveauMps(), 'mois' => ['2026-09'],
             'mode' => 'especes', 'date_paiement' => '2026-11-10',
         ])->assertCreated();
 
@@ -111,7 +124,7 @@ class GestionEcoleTest extends TestCase
         $this->travelTo('2026-11-11 08:00');   // le 11 : novembre passe en retard
         $this->getJson("/api/inscriptions/{$id}")
             ->assertJsonPath('situation.mois_en_retard', 2)
-            ->assertJsonPath('situation.montant_en_retard', 2 * 23000);
+            ->assertJsonPath('situation.montant_en_retard', 2 * 25000);
         $this->getJson('/api/dashboard')->assertJsonPath('eleves_en_retard', 1);
 
         // juillet ne fait plus partie de l'année scolaire
@@ -126,7 +139,8 @@ class GestionEcoleTest extends TestCase
 
         $res->assertJsonPath('type', 'inscription')
             ->assertJsonPath('situation.droit_paye', false)
-            ->assertJsonPath('situation.total_du', 220000 + 23000 * 10);
+            ->assertJsonPath('situation.frais_total', 110000)
+            ->assertJsonPath('situation.total_du', 110000 + 25000 * 10);
         $this->assertMatchesRegularExpression('/^ETU-\d{4}-\d{4}$/', $res->json('etudiant.matricule'));
     }
 
@@ -151,18 +165,24 @@ class GestionEcoleTest extends TestCase
         $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->json('id');
 
         $recu = $this->postJson('/api/paiements', [
-            'inscription_id' => $id, 'droit' => true, 'mois' => ['2026-10', '2026-11'],
+            'inscription_id' => $id, 'frais' => $this->fraisNouveauMps(), 'mois' => ['2026-10', '2026-11'],
             'mode' => 'especes', 'date_paiement' => now()->toDateString(),
         ])->assertCreated();
 
-        $recu->assertJsonPath('total', 220000 + 2 * 23000)
+        $recu->assertJsonPath('total', 110000 + 2 * 25000)
             ->assertJsonPath('situation.droit_paye', true)
-            ->assertJsonPath('situation.reste', 8 * 23000);
+            ->assertJsonPath('situation.reste', 8 * 25000)
+            ->assertJsonPath('lignes.1.designation', 'Frais généraux - Assurance');
 
         // doublons refusés
         $this->postJson('/api/paiements', [
-            'inscription_id' => $id, 'droit' => true, 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
-        ])->assertUnprocessable()->assertJsonValidationErrors('droit');
+            'inscription_id' => $id, 'frais' => [$this->frais('Frais généraux - Assurance')], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('frais');
+
+        // examen blanc : ne concerne pas la MPS
+        $this->postJson('/api/paiements', [
+            'inscription_id' => $id, 'frais' => [$this->frais('Examen blanc')], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
+        ])->assertUnprocessable()->assertJsonValidationErrors('frais');
 
         $this->postJson('/api/paiements', [
             'inscription_id' => $id, 'mois' => ['2026-11'], 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
@@ -178,12 +198,12 @@ class GestionEcoleTest extends TestCase
             'inscription_id' => $id, 'mois' => ['2026-12'], 'mode' => 'mobile_money', 'date_paiement' => now()->toDateString(),
         ])->assertUnprocessable()->assertJsonValidationErrors('reference');
 
-        $this->getJson('/api/recus/'.$recu->json('numero_recu'))->assertOk()->assertJsonCount(3, 'lignes');
+        $this->getJson('/api/recus/'.$recu->json('numero_recu'))->assertOk()->assertJsonCount(6, 'lignes');
         $pdf = $this->get('/api/recus/'.$recu->json('numero_recu').'/pdf')->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
         $this->getJson('/api/recus/INEXISTANT/pdf')->assertNotFound();
-        $this->getJson('/api/paiements')->assertOk()->assertJsonPath('data.0.total', 266000);
+        $this->getJson('/api/paiements')->assertOk()->assertJsonPath('data.0.total', 160000);
         $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('effectif', 1);
         $this->getJson('/api/inscriptions?q=Rabe')->assertOk()->assertJsonPath('total', 1);
         $this->getJson('/api/etudiants?q=Rak')->assertOk()->assertJsonPath('data.0.derniere_inscription.annee_scolaire.libelle', '2025-2026');
@@ -192,42 +212,44 @@ class GestionEcoleTest extends TestCase
     public function test_paiement_en_plusieurs_fois(): void
     {
         $this->travelTo('2026-11-15');
-        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // CM2 : 23 000 / mois
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // MPS : 25 000 / mois
+        $assurance = 'frais-'.$this->frais('Frais généraux - Assurance');   // 60 000
         $payer = fn (array $corps) => $this->postJson('/api/paiements', $corps + [
             'inscription_id' => $id, 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
         ]);
 
-        // 1er versement : 100 000 sur le droit (220 000) et 10 000 sur novembre (23 000)
-        $r1 = $payer(['droit' => true, 'mois' => ['2026-11'], 'montants' => ['droit' => 100000, '2026-11' => 10000]])
+        // 1er versement : 25 000 sur l'assurance (60 000) et 10 000 sur novembre (25 000)
+        $r1 = $payer(['frais' => [$this->frais('Frais généraux - Assurance')], 'mois' => ['2026-11'], 'montants' => [$assurance => 25000, '2026-11' => 10000]])
             ->assertCreated()
-            ->assertJsonPath('total', 110000)
-            ->assertJsonPath('situation.droit_paye', false)
-            ->assertJsonPath('situation.droit.reste', 120000);
+            ->assertJsonPath('total', 35000)
+            ->assertJsonPath('situation.droit_paye', false);
+        $this->assertSame(35000, collect($r1->json('situation.frais'))->firstWhere('cle', $assurance)['reste']);
         $nov = collect($r1->json('situation.mois'))->firstWhere('mois', '2026-11');
-        $this->assertSame([false, true, 10000, 13000], [$nov['paye'], $nov['partiel'], $nov['montant_paye'], $nov['reste']]);
-        $this->assertSame(13000, collect($r1->json('lignes'))->firstWhere('mois', '2026-11')['reste_apres']);
+        $this->assertSame([false, true, 10000, 15000], [$nov['paye'], $nov['partiel'], $nov['montant_paye'], $nov['reste']]);
+        $this->assertSame(15000, collect($r1->json('lignes'))->firstWhere('mois', '2026-11')['reste_apres']);
 
         // un mois partiellement payé reste « en retard » / non payé dans la liste
         $this->getJson('/api/inscriptions?mois=2026-11&statut=paye')->assertJsonPath('total', 0);
         $this->getJson('/api/inscriptions?mois=2026-11&statut=en_retard')->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.ecolage_mois.montant_paye', 10000)
-            ->assertJsonPath('data.0.ecolage_mois.reste', 13000);
+            ->assertJsonPath('data.0.ecolage_mois.reste', 15000);
 
         // on ne peut pas verser plus que le reste
-        $payer(['mois' => ['2026-11'], 'montants' => ['2026-11' => 14000]])
+        $payer(['mois' => ['2026-11'], 'montants' => ['2026-11' => 16000]])
             ->assertUnprocessable()->assertJsonValidationErrors('montants.2026-11');
-        $payer(['droit' => true, 'montants' => ['droit' => 0]])->assertUnprocessable();
+        $payer(['frais' => [$this->frais('Frais généraux - Assurance')], 'montants' => [$assurance => 0]])->assertUnprocessable();
 
         // un changement de tarif ne modifie pas un élément déjà entamé
-        Classe::where('nom', 'CM2')->update(['ecolage_mensuel' => 30000]);
+        Classe::where('nom', 'MPS')->update(['ecolage_mensuel' => 30000]);
+        Frais::where('id', $this->frais('Frais généraux - Assurance'))->update(['montant' => 80000]);
 
         // 2e versement sans montant : solde exactement le reste
-        $r2 = $payer(['droit' => true, 'mois' => ['2026-11']])->assertCreated()
-            ->assertJsonPath('total', 120000 + 13000)
-            ->assertJsonPath('situation.droit_paye', true);
+        $r2 = $payer(['frais' => [$this->frais('Frais généraux - Assurance')], 'mois' => ['2026-11']])->assertCreated()
+            ->assertJsonPath('total', 35000 + 15000);
+        $this->assertTrue(collect($r2->json('situation.frais'))->firstWhere('cle', $assurance)['solde']);
         $this->assertTrue(collect($r2->json('situation.mois'))->firstWhere('mois', '2026-11')['paye']);
-        $this->assertSame(0, collect($r2->json('lignes'))->firstWhere('type', 'droit')['reste_apres']);
-        $this->assertSame(100000, collect($r2->json('lignes'))->firstWhere('type', 'droit')['deja_paye']);
+        $this->assertSame(0, collect($r2->json('lignes'))->firstWhere('type', 'frais')['reste_apres']);
+        $this->assertSame(25000, collect($r2->json('lignes'))->firstWhere('type', 'frais')['deja_paye']);
 
         // élément soldé : plus aucun versement accepté
         $payer(['mois' => ['2026-11'], 'montants' => ['2026-11' => 1000]])
@@ -244,7 +266,7 @@ class GestionEcoleTest extends TestCase
             'inscription_id' => $id, 'mode' => 'especes', 'date_paiement' => now()->toDateString(),
         ]);
 
-        $mauvais = $payer(['droit' => true, 'mois' => ['2026-11']])->assertCreated()
+        $mauvais = $payer(['frais' => $this->fraisNouveauMps(), 'mois' => ['2026-11']])->assertCreated()
             ->assertJsonPath('encaisse_par', 'Administrateur')
             ->json('numero_recu');
 
@@ -267,7 +289,7 @@ class GestionEcoleTest extends TestCase
         $this->get("/api/recus/{$mauvais}/pdf")->assertOk();
 
         // correction : on encaisse à nouveau, avec un nouveau numéro
-        $bon = $payer(['droit' => true, 'montants' => ['droit' => 50000]])->assertCreated()
+        $bon = $payer(['frais' => [$this->frais('Frais généraux - Assurance')], 'montants' => ['frais-'.$this->frais('Frais généraux - Assurance') => 50000]])->assertCreated()
             ->assertJsonPath('situation.total_paye', 50000)->json('numero_recu');
         $this->assertNotSame($mauvais, $bon);
 
@@ -301,9 +323,9 @@ class GestionEcoleTest extends TestCase
     public function test_sortie_d_un_eleve_renvoye_ou_parti(): void
     {
         $this->travelTo('2026-12-15');
-        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // CM2, 23 000 / mois
+        $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->assertCreated()->json('id'); // MPS, 25 000 / mois
         $this->postJson('/api/paiements', [
-            'inscription_id' => $id, 'droit' => true, 'mois' => ['2026-09', '2026-10'],
+            'inscription_id' => $id, 'frais' => $this->fraisNouveauMps(), 'mois' => ['2026-09', '2026-10'],
             'mode' => 'especes', 'date_paiement' => now()->toDateString(),
         ])->assertCreated();
 
@@ -318,7 +340,7 @@ class GestionEcoleTest extends TestCase
             'motif_sortie' => 'renvoye', 'date_sortie' => '2026-11-20', 'remarque_sortie' => 'Conseil de discipline',
         ])->assertOk()->assertJsonPath('motif_sortie', 'renvoye')->json('situation');
         $this->assertSame(['2026-09', '2026-10', '2026-11'], array_column($s['mois'], 'mois'));
-        $this->assertSame(23000, $s['reste']);   // novembre seul reste à payer
+        $this->assertSame(25000, $s['reste']);   // novembre seul reste à payer
         $this->assertTrue($s['sorti']);
         $this->postJson("/api/inscriptions/{$id}/sortie", ['motif_sortie' => 'abandon', 'date_sortie' => '2026-11-21'])
             ->assertUnprocessable();
@@ -365,9 +387,12 @@ class GestionEcoleTest extends TestCase
             ['MPS', 'MMS', 'MGS', 'CP1', 'CP2', 'CE', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème'],
             array_column($classes, 'nom')
         );
-        $this->assertSame([220000], array_values(array_unique(array_column($classes, 'droit_inscription'))));
-        $this->assertSame(23000, $classes[7]['ecolage_mensuel']);  // CM2
-        $this->assertSame(25000, $classes[8]['ecolage_mensuel']);  // 6ème
+        $this->assertSame(25000, $classes[0]['ecolage_mensuel']);  // MPS
+        $this->assertSame(25000, $classes[7]['ecolage_mensuel']);  // CM2
+        $this->assertSame(28000, $classes[8]['ecolage_mensuel']);  // 6ème
+        $this->assertSame(28000, $classes[9]['ecolage_mensuel']);  // 5ème
+        $this->assertSame(30000, $classes[10]['ecolage_mensuel']); // 4ème
+        $this->assertSame(30000, $classes[11]['ecolage_mensuel']); // 3ème
         $this->assertSame('3ème', end($classes)['nom']);           // classe finale
     }
 
@@ -375,15 +400,16 @@ class GestionEcoleTest extends TestCase
     {
         $id = $this->postJson('/api/inscriptions', $this->nouvelEleve())->json('id');
         $this->postJson('/api/paiements', [
-            'inscription_id' => $id, 'droit' => true, 'mois' => ['2026-10'],
+            'inscription_id' => $id, 'frais' => $this->fraisNouveauMps(), 'mois' => ['2026-10'],
             'mode' => 'especes', 'date_paiement' => now()->toDateString(),
         ])->assertCreated();
 
-        Classe::find(1)->update(['droit_inscription' => 300000, 'ecolage_mensuel' => 30000]);
+        Classe::find(1)->update(['ecolage_mensuel' => 30000]);
+        Frais::query()->update(['montant' => 99000]);
 
         $this->getJson("/api/inscriptions/{$id}")->assertOk()
             ->assertJsonPath('situation.droit_paye', true)
-            ->assertJsonPath('situation.total_paye', 220000 + 23000)
+            ->assertJsonPath('situation.total_paye', 110000 + 25000)
             ->assertJsonPath('situation.reste', 9 * 30000);   // seuls les 9 mois restants, au nouveau tarif
     }
 }

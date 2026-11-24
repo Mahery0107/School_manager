@@ -2,9 +2,17 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg?v=3" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestion École</title>
+    <script>
+      // thème appliqué avant l'affichage (évite un flash blanc en mode sombre) — même logique que src/theme.js
+      try {
+        var t = localStorage.getItem('gestion-ecole-theme')
+        if (t !== 'clair' && t !== 'sombre') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair'
+        document.documentElement.dataset.theme = t === 'sombre' ? 'dark' : 'light'
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
